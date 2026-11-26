@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.ssg/
+.wrangler/
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+src/catalog-data.generated.ts
+*.log
+.DS_Store

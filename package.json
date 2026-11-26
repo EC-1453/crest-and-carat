@@ -1,0 +1,45 @@
+{
+  "name": "crest-and-carat",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "catalog:prepare": "node --disable-warning=ExperimentalWarning scripts/generate-catalog.mts",
+    "dev": "npm run catalog:prepare && vite",
+    "check": "npm run catalog:prepare && tsc --noEmit",
+    "build": "npm run check && vite build && vite build --ssr src/entry-server.tsx --outDir .ssg && node scripts/prerender.mjs",
+    "preview": "vite preview",
+    "pages:dev": "wrangler pages dev dist",
+    "cap:sync": "npm run build && cap sync",
+    "cap:ios": "cap open ios",
+    "cap:android": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/browser": "8.0.5",
+    "@capacitor/core": "8.6.3",
+    "@capacitor/ios": "8.6.3",
+    "@fontsource-variable/cormorant-garamond": "5.3.0",
+    "@fontsource-variable/inter": "5.3.0",
+    "lucide-react": "1.81.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.3",
+    "@cloudflare/workers-types": "5.20261125.1",
+    "@tailwindcss/vite": "4.3.5",
+    "@types/node": "22.20.7",
+    "@types/react": "19.3.3",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "5.2.0",
+    "tailwindcss": "4.3.5",
+    "typescript": "5.9.3",
+    "vite": "7.3.8",
+    "wrangler": "4.168.0"
+  }
+}
