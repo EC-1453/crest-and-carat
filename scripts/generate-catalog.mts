@@ -7,7 +7,7 @@ const catalog = compileCatalog();
 const publicDirectory = realpathSync(fileURLToPath(new URL('../public/', import.meta.url)));
 
 for (const product of catalog.products) {
-  if (!product.buyAndPersonalizeEnabled) continue;
+  if (!product.image.approved) continue;
   const { src, srcSet, avifSrcSet } = product.image;
   const sources = [src, ...[srcSet, avifSrcSet].flatMap((set) => set?.split(',').map((part) => part.trim().split(/\s+/u)[0]) ?? [])];
   for (const source of sources) {

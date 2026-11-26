@@ -10,3 +10,5 @@ dist/
 src/catalog-data.generated.ts
 *.log
 .DS_Store
+
+!.dev.vars.example

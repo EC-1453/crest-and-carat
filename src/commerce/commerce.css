@@ -1,0 +1,38 @@
+.commerce-page { max-width: 58rem; }
+.commerce-page > section, .commerce-page > .commerce-panel { margin-block-start: 2rem; }
+.commerce-page h2, .commerce-panel legend { font-family: var(--display); font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.15; }
+.commerce-page h3, .commerce-track h3 { font-size: 1.5rem; overflow-wrap: anywhere; }
+.commerce-form, .commerce-panel, .commerce-fields, .commerce-review, .commerce-track { display: grid; gap: 1rem; }
+.commerce-form, .commerce-track { margin-block-start: 1.5rem; }
+.commerce-form { gap: 1.5rem; }
+.commerce-panel { margin-inline: 0; min-inline-size: 0; padding: clamp(1rem, 4vw, 2rem); border: 1px solid var(--line); }
+.commerce-panel legend { padding-inline: .375rem; }
+.commerce-panel address { font-style: normal; overflow-wrap: anywhere; }
+.commerce-panel a { overflow-wrap: anywhere; }
+.commerce-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+.commerce-fields label, .commerce-line label { font-size: .875rem; font-weight: 600; }
+.commerce-fields input, .commerce-fields select { width: 100%; font-size: 1rem; font-weight: 400; }
+.commerce-track .commerce-fields { grid-template-columns: minmax(0, 1fr); justify-items: start; }
+.commerce-track .catalog-field { width: min(100%, 26rem); }
+.commerce-track .catalog-help { margin: 0; }
+.commerce-lines, .commerce-review__items, .commerce-shipping { margin: 0; padding: 0; list-style: none; }
+.commerce-lines { margin-block-start: .75rem; border-block-start: 1px solid var(--line); }
+.commerce-line { display: flex; flex-wrap: wrap; gap: 1rem 2rem; justify-content: space-between; padding-block: 1rem; border-block-end: 1px solid var(--line); }
+.commerce-line > div:first-child { flex: 1 1 14rem; min-width: 0; }
+.commerce-line p { margin-block-start: .375rem; overflow-wrap: anywhere; }
+.commerce-line__actions { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem 1rem; }
+.commerce-quantity { width: 6rem; }
+.commerce-edit { margin-block-start: 1rem; }
+.commerce-review__items li, .commerce-shipping li { display: grid; gap: .25rem; padding-block: .75rem; border-block-end: 1px solid var(--line); overflow-wrap: anywhere; }
+.commerce-review__delivery { display: grid; gap: .5rem; }
+.commerce-totals { display: grid; gap: .5rem; margin: 0; }
+.commerce-totals div { display: flex; justify-content: space-between; gap: 1rem; }
+.commerce-totals dd { margin: 0; text-align: end; white-space: nowrap; }
+.commerce-total { padding-block-start: .75rem; border-block-start: 1px solid var(--line); font-weight: 650; }
+.commerce-engraving { padding-inline: .25rem; border-inline-start: 2px solid var(--line); white-space: pre-wrap; overflow-wrap: anywhere; }
+.commerce-approval .catalog-opt-in { padding-block-start: 1rem; border-block-start: 1px solid var(--line); }
+.catalog-text-button { min-block-size: 2.75rem; padding: 0; border: 0; background: transparent; color: var(--blue-dark); text-decoration: underline; text-underline-offset: .22em; }
+.catalog-text-button:disabled { opacity: .65; }
+@media (max-width: 36rem) {
+  .commerce-fields { grid-template-columns: minmax(0, 1fr); }
+}

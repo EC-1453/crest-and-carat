@@ -14,7 +14,7 @@ export const editorialPages = [
   {
     path: '/track-order/',
     title: 'Track an Order | CREST & CARAT Private Client Concierge',
-    description: 'Find your carrier tracking link or ask the CREST & CARAT concierge for a production, dispatch or insured delivery update on your order.',
+    description: 'Use your private CREST & CARAT order link to check payment, shipment and carrier tracking updates.',
     label: 'Track Order',
   },
   {
@@ -78,6 +78,6 @@ export const shippingFaq = [
   },
   {
     question: 'Can I request an order update before dispatch?',
-    answer: 'Yes. Use Track Order or email the concierge with your order reference to request a production update. Look for carrier tracking details in the dispatch email.',
+    answer: 'Yes. Use the private link in your order confirmation to check your order status, or email the concierge from the address used on your order. Look for carrier tracking details in the shipping email.',
   },
 ] as const;

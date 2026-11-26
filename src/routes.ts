@@ -21,7 +21,7 @@ export interface Route {
   title: string
   description: string
   label: string
-  kind: 'home' | 'shop' | 'collection' | 'product' | 'contact' | 'app' | 'editorial' | 'not-found'
+  kind: 'home' | 'shop' | 'collection' | 'product' | 'bag' | 'contact' | 'app' | 'editorial' | 'not-found'
   slug?: string
   breadcrumbs: readonly Breadcrumb[]
   indexable: boolean
@@ -84,6 +84,13 @@ export const routes: readonly Route[] = [
       image: product.image.approved ? product.image : undefined,
     }, parents)
   }),
+  interiorRoute({
+    path: '/bag/',
+    kind: 'bag',
+    label: 'Your Bag',
+    title: 'Your Shopping Bag',
+    description: 'Review your CREST & CARAT pieces, custom engravings and delivery options before you order.',
+  }, [], false),
   interiorRoute({
     path: '/contact/',
     kind: 'contact',

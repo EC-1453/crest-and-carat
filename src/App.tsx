@@ -1,9 +1,10 @@
 import { Component, useEffect, useRef, useState, type ReactNode } from 'react'
-import { ChevronRight, Gem, Menu, MessageCircle, ShieldCheck, X } from 'lucide-react'
+import { ChevronRight, Gem, Menu, MessageCircle, ShieldCheck, ShoppingBag, X } from 'lucide-react'
 import { AppDownload, PwaRegistration } from './app-install'
 import { collections } from './catalog'
 import { CollectionCard } from './collection-card'
 import { ContactPage, PrivateList, PrivateListDrawer } from './concierge'
+import { useBag } from './commerce/bag'
 import { homeHero } from './home-media'
 import { getRoute, type Route } from './routes'
 
@@ -32,6 +33,17 @@ function Wordmark({ footer = false }: { footer?: boolean }) {
   return (
     <a className={`wordmark${footer ? ' wordmark--footer' : ''}`} href="/" aria-label="CREST & CARAT home">
       <img src="/images/wordmark.svg" width="661" height="112" alt="CREST & CARAT, an Evercrest VIP House" />
+    </a>
+  )
+}
+
+function BagLink({ mobile = false, active }: { mobile?: boolean; active: boolean }) {
+  const count = useBag().reduce((total, line) => total + line.quantity, 0)
+  return (
+    <a className={`bag-link${mobile ? ' bag-link--mobile' : ''}`} href="/bag/" aria-current={active ? 'page' : undefined}
+      aria-label={`Shopping bag${count ? `, ${count} ${count === 1 ? 'piece' : 'pieces'}` : ''}`}>
+      <ShoppingBag aria-hidden="true" size={21} strokeWidth={1.5} />
+      {count > 0 && <span className="bag-count" aria-hidden="true">{count}</span>}
     </a>
   )
 }
@@ -91,11 +103,10 @@ function Header({ path }: { path: string }) {
           {menuOpen ? <X aria-hidden="true" size={23} /> : <Menu aria-hidden="true" size={23} />}
         </button>
         <Wordmark />
-        <a className="mobile-contact" href="/contact/" aria-label="Contact the concierge">
-          <MessageCircle aria-hidden="true" size={21} strokeWidth={1.5} />
-        </a>
+        <BagLink mobile active={path === '/bag/'} />
         <nav className="desktop-nav desktop-nav--end" aria-label="Journal and concierge">
           {mainLinks.slice(2).map(navLink)}
+          <BagLink active={path === '/bag/'} />
         </nav>
         <nav className="mobile-nav" id="mobile-navigation" aria-label="Main navigation" hidden={!menuOpen}>
           {mainLinks.map(navLink)}
@@ -260,6 +271,10 @@ export async function resolveRouteContent(route: Route): Promise<ReactNode> {
     case 'product': {
       const { ProductPage } = await import('./catalog-pages')
       return <ProductPage slug={route.slug ?? ''} />
+    }
+    case 'bag': {
+      const { BagPage } = await import('./commerce/bag-page')
+      return <BagPage />
     }
     case 'contact': return <ContactPage />
     case 'app': return <div className="container private-app-page"><AppDownload /></div>

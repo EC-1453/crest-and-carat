@@ -2,8 +2,9 @@ import { renderToString } from 'react-dom/server'
 import { App, resolveRouteContent } from './App'
 import { googlePlayUrl, iosAppStoreUrl } from './app-install'
 import { BUSINESS_ADDRESS, BUSINESS_NAME, SUPPORT_EMAIL } from './business'
-import { getPurchasableOffer, productPath, products } from './catalog'
-import type { Product, PurchasableOffer, ShippingZone } from './catalog-types'
+import { productPath, products } from './catalog'
+import type { Product } from './catalog-types'
+import { parseApiBase } from './commerce/api-base'
 import { shippingFaq } from './editorial-meta'
 import { homeHero } from './home-media'
 import { notFoundRoute, routes, SITE_NAME, SITE_ORIGIN, type Route } from './routes'
@@ -13,8 +14,6 @@ export { notFoundRoute, routes }
 const organizationId = `${SITE_ORIGIN}/#organization`
 const brandId = `${SITE_ORIGIN}/#brand`
 const websiteId = `${SITE_ORIGIN}/#website`
-const shippingPolicyUrl = `${SITE_ORIGIN}/shipping-delivery/`
-const returnPolicyUrl = `${SITE_ORIGIN}/custom-orders-final-sale/`
 const socialImage = {
   src: '/images/social.jpg',
   width: 1200,
@@ -56,36 +55,13 @@ function isGuide(route: Route): boolean {
   return route.kind === 'editorial' && route.path.startsWith('/guides/') && route.path !== '/guides/'
 }
 
-function publicOffer(product: Product): PurchasableOffer | undefined {
-  return product.image.approved ? getPurchasableOffer(product) : undefined
-}
-
 function productForRoute(route: Route): Product | undefined {
   return route.kind === 'product' ? products.find(({ slug }) => slug === route.slug) : undefined
 }
 
-function businessDays(minValue: number, maxValue: number) {
-  return { '@type': 'QuantitativeValue', minValue, maxValue, unitCode: 'DAY' }
-}
-
-function destinationDetails(offer: PurchasableOffer, zone: ShippingZone): SchemaNode[] {
-  return zone.destinations.filter((destination) => offer.eligibleDestinations.includes(destination)).map((destination) => ({
-    '@type': 'OfferShippingDetails',
-    shippingDestination: { '@type': 'DefinedRegion', addressCountry: destination },
-    shippingRate: { '@type': 'MonetaryAmount', value: zone.rateUsd, currency: offer.currency },
-    deliveryTime: {
-      '@type': 'ShippingDeliveryTime',
-      handlingTime: businessDays(offer.production.minBusinessDays, offer.production.maxBusinessDays),
-      transitTime: businessDays(zone.minBusinessDays, zone.maxBusinessDays),
-    },
-    shippingSettingsLink: shippingPolicyUrl,
-  }))
-}
-
-function productSchema(product: Product, offer: PurchasableOffer): SchemaNode {
+function productSchema(product: Product): SchemaNode {
   const url = absoluteUrl(productPath(product.slug))
-  const personalized = offer.surfaces.length > 0
-
+  const stone = product.verifiedDetails?.stone
   return {
     '@type': 'Product',
     '@id': `${url}#product`,
@@ -95,23 +71,7 @@ function productSchema(product: Product, offer: PurchasableOffer): SchemaNode {
     image: [absoluteUrl(product.image.src)],
     material: product.materials,
     category: product.category,
-    ...(offer.stone ? { additionalProperty: { '@type': 'PropertyValue', name: 'Stone', value: offer.stone.description } } : {}),
-    offers: {
-      '@type': 'Offer',
-      url,
-      seller: { '@id': organizationId },
-      price: offer.priceUsd.toFixed(2),
-      priceCurrency: offer.currency,
-      availability: `https://schema.org/${offer.availability === 'PreOrder' ? 'PreOrder' : 'InStock'}`,
-      ...(offer.availability === 'PreOrder' && offer.availabilityDate ? { availabilityStarts: offer.availabilityDate } : {}),
-      shippingDetails: offer.shipping.flatMap((zone) => destinationDetails(offer, zone)),
-      hasMerchantReturnPolicy: {
-        '@type': 'MerchantReturnPolicy',
-        applicableCountry: offer.eligibleDestinations,
-        merchantReturnLink: personalized ? returnPolicyUrl : `${SITE_ORIGIN}/terms/`,
-        ...(personalized ? { returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted' } : {}),
-      },
-    },
+    ...(stone ? { additionalProperty: { '@type': 'PropertyValue', name: 'Stone', value: stone.description } } : {}),
   }
 }
 
@@ -119,7 +79,6 @@ function pageSchema(route: Route): SchemaNode {
   const url = absoluteUrl(route.path)
   const guide = isGuide(route)
   const product = productForRoute(route)
-  const offer = product && publicOffer(product)
   const appLinks = [iosAppStoreUrl, googlePlayUrl].filter(Boolean)
   const trailId = `${url}#breadcrumb`
   const graph: SchemaNode[] = [
@@ -153,7 +112,7 @@ function pageSchema(route: Route): SchemaNode {
       inLanguage: 'en',
       isPartOf: { '@id': websiteId },
       ...(route.breadcrumbs.length > 1 ? { breadcrumb: { '@id': trailId } } : {}),
-      ...(product && offer ? { mainEntity: { '@id': `${url}#product` } } : {}),
+      ...(product?.image.approved ? { mainEntity: { '@id': `${url}#product` } } : {}),
     },
   ]
 
@@ -211,7 +170,7 @@ function pageSchema(route: Route): SchemaNode {
     })
   }
 
-  if (product && offer) graph.push(productSchema(product, offer))
+  if (product?.image.approved) graph.push(productSchema(product))
 
   return { '@context': 'https://schema.org', '@graph': graph }
 }
@@ -312,30 +271,6 @@ export function renderRobots(): string {
 }
 
 export function renderMerchantFeed(): string {
-  const items = products.flatMap((product) => {
-    const offer = publicOffer(product)
-    if (!offer) return []
-
-    const shipping = offer.shipping.flatMap((zone) => zone.destinations
-      .filter((destination) => offer.eligibleDestinations.includes(destination))
-      .map((destination) => `      <g:shipping><g:country>${escapeMarkup(destination)}</g:country><g:service>${escapeMarkup(zone.name)}</g:service><g:price>${zone.rateUsd.toFixed(2)} ${offer.currency}</g:price></g:shipping>`))
-
-    return [
-      '    <item>',
-      `      <g:id>${escapeMarkup(product.slug)}</g:id>`,
-      `      <g:title>${escapeMarkup(product.name)}</g:title>`,
-      `      <g:description>${escapeMarkup(product.description)}</g:description>`,
-      `      <g:link>${escapeMarkup(absoluteUrl(productPath(product.slug)))}</g:link>`,
-      `      <g:image_link>${escapeMarkup(absoluteUrl(product.image.src))}</g:image_link>`,
-      `      <g:price>${offer.priceUsd.toFixed(2)} ${offer.currency}</g:price>`,
-      `      <g:availability>${offer.availability === 'PreOrder' ? 'preorder' : 'in_stock'}</g:availability>`,
-      ...(offer.availability === 'PreOrder' && offer.availabilityDate ? [`      <g:availability_date>${escapeMarkup(offer.availabilityDate)}</g:availability_date>`] : []),
-      `      <g:product_type>${escapeMarkup(product.category)}</g:product_type>`,
-      ...shipping,
-      '    </item>',
-    ]
-  })
-
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">',
@@ -343,9 +278,13 @@ export function renderMerchantFeed(): string {
     `    <title>${escapeMarkup(SITE_NAME)}</title>`,
     `    <link>${SITE_ORIGIN}/</link>`,
     '    <description>Verified fine jewelry and jeweled objects available to purchase.</description>',
-    ...items,
     '  </channel>',
     '</rss>',
     '',
   ].join('\n')
+}
+
+export function renderHeaders(template: string): string {
+  const apiOrigin = parseApiBase(import.meta.env.VITE_API_BASE_URL)?.origin
+  return apiOrigin ? template.replace("connect-src 'self';", `connect-src 'self' ${apiOrigin};`) : template
 }

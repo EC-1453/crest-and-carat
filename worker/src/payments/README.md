@@ -1,0 +1,34 @@
+# Hosted payments
+
+1. Activate a merchant account and confirm the payment methods approved for your business and buyers. Keep each provider disabled until its setup is complete. Checkout options come from configured Worker bindings. Only the payment provider collects card or bank credentials.
+2. Add payment API keys and signing secrets using Cloudflare Worker secrets. For example, run `npx wrangler secret put STRIPE_SECRET_KEY --env production --config worker/wrangler.toml`, then repeat with the signing-secret name for that provider. Use Worker variables for enabled flags, public account IDs and allowed hosted origins. Use dedicated test credentials and a separate test D1 database.
+3. Register the provider webhook at the production API origin plus the path listed below. Confirm the endpoint and test a successful payment, a declined payment and a duplicate webhook before offering checkout to buyers. The Worker uses provider API records to verify the order reference, USD total and payment status. Approvals and fees are set by each merchant agreement.
+
+| Provider | Worker configuration | Provider setup |
+| --- | --- | --- |
+| Stripe | `STRIPE_ENABLED=true`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Use a matching test or live secret key. Register `/api/webhooks/stripe` for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` and `checkout.session.expired`. Enable wallets in the Stripe account. Hosted Checkout displays Apple Pay or Google Pay where the buyer, browser, device and merchant account are eligible. The integration charges USD and supports eligible international cards. |
+| Mercury | `MERCURY_ENABLED=true`, `MERCURY_TRANSFER_APPROVED=true`, `MERCURY_EGRESS_APPROVED=true`, `MERCURY_API_TOKEN`, `MERCURY_ACCOUNT_ID`, `MERCURY_WEBHOOK_SECRET` | Use a production read-write token plus an allowlisted egress IP approved by Mercury and a USD checking or savings account. Confirm hosted ACH and wire instructions on the account first. Register `/api/webhooks/mercury` for `transaction.created` and `transaction.updated`. Set `MERCURY_ACH_DEBIT_ENABLED=true` only if Mercury has enabled ACH Debit on that account. |
+| Helcim | `HELCIM_ENABLED=true`, `HELCIM_API_TOKEN`, `HELCIM_HOSTED_ORIGIN`, `HELCIM_WEBHOOK_SECRET` | Copy the verified `https://your-dba.myhelcim.com` account origin and the webhook verifier token. Register `/api/webhooks/cards` for `cardTransaction`. Confirm that USD invoices are payable from their Online Invoice View. Enable `HELCIM_ACH_ENABLED=true` after confirming US ACH on the hosted account and granting ACH read access. For eligible Google Pay, check account settings and the hosted invoice itself. |
+| Airwallex | `AIRWALLEX_ENABLED=true`, `AIRWALLEX_CLIENT_ID`, `AIRWALLEX_API_KEY`, `AIRWALLEX_ACCOUNT_ID`, `AIRWALLEX_WEBHOOK_SECRET` | Confirm account access to the Checkout Sessions beta and grant Checkout Session read/write and Payments Intent read. Set the webhook API version to `2026-05-29` or newer and register `/api/webhooks/airwallex` for `checkout_session.created`, `checkout_session.completed`, `checkout_session.cancelled` and `payment_intent.succeeded`. Use a sandbox account in test. |
+| Relay | `RELAY_ENABLED=true`, `RELAY_BRIDGE_URL`, `RELAY_BRIDGE_TOKEN`, `RELAY_HOSTED_ORIGIN` | Provide an approved merchant-operated bridge for order-specific Relay Quick Requests. Copy the real Relay hosted origin from a verified merchant request. A buyer sees ACH or wire instructions on the Relay page. Reconciliation uses the bridge and Cron. |
+| Nickel | `NICKEL_ENABLED=false` | Retain the disabled setting until merchant API access and hosted payments for US consumer jewelry are verified. Nickel currently lists API and webhooks on its Pro plan. |
+
+Mercury and Helcim are disabled in local test mode. The Airwallex sandbox uses the sandbox API hostname with sandbox credentials. Keep Mercury off if suitable approved egress is unavailable. Cloudflare's shared Worker egress does not give this project a stable dedicated source IP.
+
+Mercury creates one invoice per stable order reference. The Worker checks applied payments and confirms the corresponding positive, posted USD deposits in the configured account before marking the order paid. In Mercury, unmatched wires or short and excess transfers can remain unapplied. Use the order reference on the hosted instructions and review unmatched transfers in the Mercury dashboard. A posted transfer that carries the exact order reference and remains unapplied enters payment review when the webhook links it to the order.
+
+Mercury and Airwallex acknowledge signed deliveries promptly and persist reconciliation work in D1. Scheduled reconciliation also checks existing checkout and invoice records. Fulfillment waits for the verified paid status. Duplicate and concurrent deliveries cannot advance the same order twice. A checkout create timeout enters recovery by order reference. Check the provider dashboard for unresolved checkout, invalid currency, overpayment or refusal to settle. An expired or cancelled checkout is placed in payment review.
+
+## Relay bridge endpoints
+
+The bridge should use approved merchant access, reconcile settlement to the exact Relay payment request and reuse the same request for the same order reference. Pass a random bearer token of at least 32 characters to protect all three endpoints. The bridge is an optional external dependency.
+
+| Request | Result |
+| --- | --- |
+| `POST /requests` | Accepts `{reference,currency,amountCents,email,name,methods}` and `Idempotency-Key`. Returns `{providerId,reference,currency,amountCents,url}` for the one-time Relay-hosted request. |
+| `GET /requests/by-reference/{reference}` | Returns the same checkout object or HTTP 404 when no request exists. |
+| `GET /requests/{providerId}` | Returns `{providerId,reference,currency,amountCents,receivedCents,status,transactionId,settledAt}`. Status is `pending`, `settled` or `exception`. Supply a real transaction identifier and an ISO timestamp on settlement. |
+
+The payment registry in `index.ts` uses the `PaymentGateway` contract. A new gateway implements checkout creation, checkout recovery and authoritative reconciliation, then defines its environment gates in the registry. Add its verified webhook route when available.
+
+[Stripe Checkout](https://docs.stripe.com/checkout/fulfillment) · [Mercury invoicing API](https://docs.mercury.com/docs/invoicing) · [Mercury token policies](https://docs.mercury.com/docs/api-token-security-policies) · [Helcim Invoice Online View](https://devdocs.helcim.com/docs/online-invoice-view) · [Airwallex hosted setup](https://www.airwallex.com/docs/payments/integration-options/web-checkout/checkout-session/quickstart) · [Relay Quick Requests](https://relayfi.com/hc/en-us/articles/31081685524372-Getting-Started-with-Relay-s-Quick-Request-feature/) · [Nickel plans](https://www.nickel.com/pricing)

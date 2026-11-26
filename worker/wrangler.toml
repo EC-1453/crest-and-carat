@@ -1,0 +1,41 @@
+name = "crest-and-carat-api-test"
+main = "src/index.ts"
+compatibility_date = "2026-11-25"
+workers_dev = true
+
+[vars]
+ENVIRONMENT = "test"
+STOREFRONT_ORIGIN = "http://localhost:5173"
+SENDER_EMAIL = "privateclient@evercrest.vip"
+SUPPORT_EMAIL = "support@evercrest.vip"
+NICKEL_ENABLED = "false"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "crest-and-carat-test"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["*/5 * * * *", "1-59/5 * * * *", "2-59/5 * * * *"]
+
+[env.production]
+name = "crest-and-carat-api"
+workers_dev = false
+routes = [{ pattern = "carat.evercrest.vip/api/*", zone_name = "evercrest.vip" }]
+
+[env.production.vars]
+ENVIRONMENT = "production"
+STOREFRONT_ORIGIN = "https://carat.evercrest.vip"
+SENDER_EMAIL = "privateclient@evercrest.vip"
+SUPPORT_EMAIL = "support@evercrest.vip"
+NICKEL_ENABLED = "false"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "crest-and-carat"
+database_id = "00000000-0000-0000-0000-000000000001"
+migrations_dir = "migrations"
+
+[env.production.triggers]
+crons = ["*/5 * * * *", "1-59/5 * * * *", "2-59/5 * * * *"]
