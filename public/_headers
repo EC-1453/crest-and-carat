@@ -30,6 +30,15 @@
 /404.html
   X-Robots-Tag: noindex, follow
 
+/bag/*
+  Cache-Control: no-store
+  Referrer-Policy: no-referrer
+  X-Robots-Tag: noindex, follow
+
+/track-order/*
+  Cache-Control: no-store
+  Referrer-Policy: no-referrer
+
 /.well-known/apple-app-site-association
   Cache-Control: no-cache
   Content-Type: application/json

@@ -1,0 +1,12 @@
+# Copy this file to worker/.dev.vars for local development.
+# Use an independent random value of 32 or more characters for each secret.
+TRACKING_SECRET=
+SHIPMENT_ADMIN_SECRET=
+# STRIPE_ENABLED=false
+# STRIPE_SECRET_KEY=
+# STRIPE_WEBHOOK_SECRET=
+# AIRWALLEX_ENABLED=false
+# AIRWALLEX_CLIENT_ID=
+# AIRWALLEX_API_KEY=
+# AIRWALLEX_ACCOUNT_ID=
+# AIRWALLEX_WEBHOOK_SECRET=

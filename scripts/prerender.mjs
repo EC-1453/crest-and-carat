@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import {
   notFoundRoute,
   renderDocument,
+  renderHeaders,
   renderMerchantFeed,
   renderRobots,
   renderSitemap,
@@ -25,6 +26,7 @@ const routeModules = {
   shop: 'src/catalog-pages.tsx',
   collection: 'src/catalog-pages.tsx',
   product: 'src/catalog-pages.tsx',
+  bag: 'src/commerce/bag-page.tsx',
   editorial: 'src/editorial.tsx',
 }
 
@@ -70,7 +72,17 @@ await Promise.all([
   writeFile(join(output, 'sitemap.xml'), renderSitemap()),
   writeFile(join(output, 'robots.txt'), renderRobots()),
   writeFile(join(output, 'merchant-feed.xml'), renderMerchantFeed()),
+  writeFile(join(output, '_headers'), renderHeaders(await readFile(join(output, '_headers'), 'utf8'))),
+  removeSpaFallback(),
   rm(manifestPath),
 ])
+
+async function removeSpaFallback() {
+  const path = join(output, '_redirects')
+  const contents = await readFile(path, 'utf8')
+  const rules = contents.split(/\r?\n/).filter((line) => line.trim() !== '/* /index.html 200')
+  if (rules.some((line) => line.trim() && !line.trimStart().startsWith('#'))) await writeFile(path, rules.join('\n'))
+  else await rm(path)
+}
 
 console.log(`Prerendered ${routes.length} HTML routes and a static 404; generated sitemap, robots and Merchant Center feed.`)

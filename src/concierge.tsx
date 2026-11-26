@@ -1,8 +1,8 @@
-import { Capacitor } from '@capacitor/core';
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { SUPPORT_ALIAS, SUPPORT_EMAIL } from './business';
 import { collections, products } from './catalog';
+import { apiEndpoint, newRequestId } from './commerce/http';
 import './concierge.css';
 
 export type SubscriberSource = 'vip' | 'inquiry' | 'checkout';
@@ -13,6 +13,8 @@ type SubscriberInput = {
   marketingConsent: boolean;
   requestId?: string;
   productSlug?: string;
+  sourcePage?: string;
+  interestCategory?: string;
   name?: string;
   message?: string;
   website?: string;
@@ -25,18 +27,6 @@ type SubscriberResult =
 const fallbackMessage = 'Concierge forms are temporarily unavailable. You can continue by email below.';
 const privateListSessionKey = 'crest-and-carat.private-list.seen';
 const privateListEvent = 'crest-and-carat:private-list';
-const productionOrigin = 'https://carat.evercrest.vip';
-
-function newRequestId() {
-  return globalThis.crypto.randomUUID?.() ?? Array.from(
-    globalThis.crypto.getRandomValues(new Uint8Array(16)),
-    (byte) => byte.toString(16).padStart(2, '0'),
-  ).join('');
-}
-
-export function apiEndpoint(path: `/api/${string}`) {
-  return Capacitor.isNativePlatform() ? `${productionOrigin}${path}` : path;
-}
 
 export async function submitSubscriber(input: SubscriberInput, signal?: AbortSignal): Promise<SubscriberResult> {
   const controller = new AbortController();
@@ -51,6 +41,7 @@ export async function submitSubscriber(input: SubscriberInput, signal?: AbortSig
       headers: { 'Content-Type': 'application/json' },
       credentials: 'omit',
       cache: 'no-store',
+      redirect: 'error',
       body: JSON.stringify({ ...input, requestId: input.requestId || newRequestId() }),
       signal: controller.signal,
     });
@@ -134,6 +125,15 @@ function formText(form: FormData, key: string) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function subscriberContext() {
+  const path = window.location.pathname;
+  const sourcePage = /^\/(?:[a-z0-9-]+\/)*[a-z0-9-]*$/iu.test(path) ? path : '/';
+  const [, route, slug] = sourcePage.split('/');
+  const interestCategory = route === 'collections' ? collections.find((item) => item.slug === slug)?.slug
+    : route === 'products' ? products.find((item) => item.slug === slug)?.category : undefined;
+  return { sourcePage, interestCategory };
+}
+
 function Honeypot() {
   return (
     <div className="concierge-honeypot" aria-hidden="true">
@@ -164,6 +164,7 @@ export function PrivateList({ compact = false, placement = 'footer' }: { compact
     rememberListVisit();
     if (!inDrawer) window.dispatchEvent(new Event(privateListEvent));
     await send({
+      ...subscriberContext(),
       source: 'vip',
       email: email.trim(),
       marketingConsent: form.get('marketingConsent') === 'yes',
@@ -311,7 +312,9 @@ export function ContactPage() {
       message,
     ].join('\n');
     setFallbackLink(mailLink(product ? `Inquiry about ${product.name}` : 'CREST & CARAT concierge inquiry', details));
-    await send({ source: 'inquiry', email, name, message, marketingConsent, website: formText(form, 'website'), ...(piece ? { productSlug: piece } : {}) });
+    const collection = collections.find(({ slug }) => slug === new URLSearchParams(window.location.search).get('collection'));
+    await send({ ...subscriberContext(), source: 'inquiry', email, name, message, marketingConsent, website: formText(form, 'website'),
+      interestCategory: product?.slug ?? collection?.slug, ...(piece ? { productSlug: piece } : {}) });
   }
 
   return (

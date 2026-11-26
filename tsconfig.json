@@ -15,5 +15,5 @@
     "skipLibCheck": true,
     "types": ["vite/client", "node", "@cloudflare/workers-types"]
   },
-  "include": ["src", "functions", "scripts/**/*.mts", "vite.config.ts", "capacitor.config.ts"]
+  "include": ["src", "scripts/**/*.mts", "vite.config.ts", "capacitor.config.ts"]
 }

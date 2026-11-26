@@ -1,0 +1,3 @@
+# Cloudflare Pages serves the prerendered output with its native asset routing.
+# The static build removes this SPA fallback to keep canonical documents and a true 404.
+/* /index.html 200

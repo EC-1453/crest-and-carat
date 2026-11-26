@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { TrackOrder } from './commerce/track-order';
 import { BUSINESS_ADDRESS, BUSINESS_NAME, FINAL_SALE_NOTICE, SUPPORT_EMAIL } from './business';
 import { shippingFaq } from './editorial-meta';
 import './editorial.css';
@@ -95,32 +96,6 @@ function SupportLink() {
   return <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>;
 }
 
-function TrackOrder() {
-  const [reference, setReference] = useState('');
-  const subject = reference.trim() ? `Order status — ${reference.trim()}` : 'Order status request';
-  const body = reference.trim()
-    ? `Hello CREST & CARAT,\n\nPlease send me an update on order ${reference.trim()}.\n\nThank you.`
-    : 'Hello CREST & CARAT,\n\nPlease send me an update on my order.\n\nOrder reference: \n\nThank you.';
-  const href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-
-  return (
-    <div className="editorial-track">
-      <label htmlFor="order-reference">Order reference <span>(optional)</span></label>
-      <input
-        id="order-reference"
-        type="text"
-        value={reference}
-        onChange={(event) => setReference(event.currentTarget.value)}
-        maxLength={80}
-        placeholder="From your order confirmation"
-        aria-describedby="order-reference-help"
-      />
-      <p id="order-reference-help">Send the request from the email address used for your order.</p>
-      <a className="editorial-action" href={href}>Open email to request an update</a>
-    </div>
-  );
-}
-
 const entries: readonly EditorialEntry[] = [
   {
     path: '/about/',
@@ -187,7 +162,7 @@ const entries: readonly EditorialEntry[] = [
     path: '/track-order/',
     eyebrow: 'Client care',
     heading: 'Track an Order',
-    intro: 'Ask the concierge for an update on your piece, from production to delivery.',
+    intro: 'Use your private order link to check payment and shipping updates.',
     sections: [
       {
         id: 'find-your-tracking-link',
@@ -196,8 +171,8 @@ const entries: readonly EditorialEntry[] = [
       },
       {
         id: 'request-an-update',
-        heading: 'Request an update',
-        content: <><TrackOrder /><p>If your email app does not open, email <SupportLink /> and put your order reference in the subject line. Keep card numbers, passwords and other payment details out of your message.</p></>,
+        heading: 'Check your order status',
+        content: <><TrackOrder /><p>If you need a new private link, email <SupportLink /> from the address on your order.</p></>,
       },
     ],
     links: [deliveryLink, contactLink],

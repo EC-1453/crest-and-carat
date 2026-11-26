@@ -1,11 +1,11 @@
 const cachePrefix = 'crest-carat-static-';
-const cacheName = `${cachePrefix}1`;
+const cacheName = `${cachePrefix}2`;
 const assetCacheName = `${cacheName}-assets`;
 const assetLimit = 96;
 const offlinePage = '/offline.html';
 const offlineAssets = [offlinePage, '/offline.css', '/icons/icon-192.png'];
 const fingerprintedAsset = /^\/assets\/.+-[\w-]{8,}\.(?:avif|webp|png|jpe?g|svg|woff2?|css|js|ico)$/i;
-const onlineOnlyPath = /^\/(?:api|checkout|availability|track-order|order-status|orders|contact)(?:\/|$)/i;
+const onlineOnlyPath = /^\/(?:api|bag|checkout|availability|track-order|order-status|orders|contact)(?:\/|$)/i;
 const cacheableDestinations = new Set(['image', 'style', 'script', 'font']);
 
 self.addEventListener('install', (event) => {
