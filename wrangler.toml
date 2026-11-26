@@ -1,0 +1,11 @@
+name = "crest-and-carat"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-02-01"
+
+# Add the following binding with your D1 database UUID before production deployment,
+# or configure the binding in the Cloudflare Pages dashboard.
+# [[d1_databases]]
+# binding = "SUBSCRIBERS_DB"
+# database_name = "crest-and-carat-subscribers"
+# database_id = "<D1 database UUID>"
+# migrations_dir = "migrations"
