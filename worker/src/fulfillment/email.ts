@@ -1,3 +1,5 @@
+import { BRAND_NAME, COPYRIGHT_NOTICE } from '../../../src/brand'
+
 export interface EmailEnv {
   DB: D1Database
   ENVIRONMENT: 'test' | 'production'
@@ -79,16 +81,19 @@ export function emailStatement(
   const { id, orderId, kind, to, subject, heading, paragraphs, lines, link } = message
   const from = senderAddress(env)
   const replyTo = supportAddress(env)
-  const text = ['CREST & CARAT', heading, ...paragraphs, ...(lines ?? []),
-    ...(link ? [`Track your order: ${link}`] : []), `Private Client Services · ${replyTo}`].join('\n\n')
+  const text = [BRAND_NAME, heading, ...paragraphs, ...(lines ?? []),
+    ...(link ? [`Track your order: ${link}`] : []), `Private Client Services · ${replyTo}`, COPYRIGHT_NOTICE].join('\n\n')
   const html = `<!doctype html><html lang="en"><body style="margin:0;background:#f6f2eb;color:#252625;font:16px/1.6 Georgia,serif">
   <main style="max-width:560px;margin:0 auto;padding:32px 24px">
-    <p style="letter-spacing:0.16em;font-size:13px">CREST &amp; CARAT</p>
+    <p style="letter-spacing:0.16em;font-size:13px">${escapeHtml(BRAND_NAME)}</p>
     <h1 style="font-weight:normal;font-size:28px;line-height:1.2">${escapeHtml(heading)}</h1>
     ${paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('')}
     ${lines?.length ? `<ul>${lines.map((line) => `<li style="white-space:pre-wrap">${escapeHtml(line)}</li>`).join('')}</ul>` : ''}
     ${link ? `<p><a clicktracking="off" style="display:inline-block;background:#263d34;color:#fff;padding:12px 20px" href="${escapeHtml(link)}">Track your order</a></p>` : ''}
-    <p style="font-size:14px">Private Client Services · <a style="color:#263d34" href="mailto:${escapeHtml(replyTo)}">${escapeHtml(replyTo)}</a></p>
+    <footer>
+      <p style="font-size:14px">Private Client Services · <a style="color:#263d34" href="mailto:${escapeHtml(replyTo)}">${escapeHtml(replyTo)}</a></p>
+      <p style="font-size:12px">${escapeHtml(COPYRIGHT_NOTICE)}</p>
+    </footer>
   </main></body></html>`
   const payload = { from, replyTo, to, subject, text, html } satisfies EmailPayload
   const guard = claim ? 'EXISTS (SELECT 1 FROM fulfillment_jobs WHERE id = ? AND lease_token = ?)' : '1'

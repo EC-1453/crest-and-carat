@@ -1,7 +1,8 @@
 import { renderToString } from 'react-dom/server'
 import { App, resolveRouteContent } from './App'
 import { googlePlayUrl, iosAppStoreUrl } from './app-install'
-import { BUSINESS_ADDRESS, BUSINESS_NAME, SUPPORT_EMAIL } from './business'
+import { WORDMARK_PATH } from './brand'
+import { BUSINESS_ADDRESS, SUPPORT_EMAIL } from './business'
 import { productPath, products } from './catalog'
 import type { PrerenderedOffer, Product } from './catalog-types'
 import { parseApiBase } from './commerce/api-base'
@@ -148,9 +149,8 @@ function pageSchema(route: Route, offer: VerifiedOffer | undefined): SchemaNode 
       '@type': 'Organization',
       '@id': organizationId,
       name: SITE_NAME,
-      legalName: BUSINESS_NAME,
       url: SITE_ORIGIN,
-      logo: absoluteUrl('/images/wordmark.svg'),
+      logo: absoluteUrl(WORDMARK_PATH),
       email: SUPPORT_EMAIL,
       ...(BUSINESS_ADDRESS ? { address: BUSINESS_ADDRESS } : {}),
       brand: { '@id': brandId },
@@ -163,7 +163,7 @@ function pageSchema(route: Route, offer: VerifiedOffer | undefined): SchemaNode 
         url: absoluteUrl('/contact/'),
       },
     },
-    { '@type': 'Brand', '@id': brandId, name: SITE_NAME, url: SITE_ORIGIN, logo: absoluteUrl('/images/wordmark.svg') },
+    { '@type': 'Brand', '@id': brandId, name: SITE_NAME, url: SITE_ORIGIN, logo: absoluteUrl(WORDMARK_PATH) },
     { '@type': 'WebSite', '@id': websiteId, url: SITE_ORIGIN, name: SITE_NAME, inLanguage: 'en', publisher: { '@id': organizationId } },
     {
       '@type': route.kind === 'contact' ? 'ContactPage' : collectionPage ? 'CollectionPage' : 'WebPage',

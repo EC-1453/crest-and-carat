@@ -27,6 +27,13 @@ function schemaNodes(doc: Document): string[] {
       expect(entry['@id']).toMatch(/^https:\/\/carat\.evercrest\.vip\//)
       nodes.push(String(entry['@type']))
       expect(entry).not.toHaveProperty('offers')
+      if (entry['@type'] === 'Organization' || entry['@type'] === 'Brand') {
+        expect(entry).toMatchObject({
+          name: 'CREST & CARAT', url: origin, logo: domain('/images/crest-carat-wordmark.svg'),
+        })
+        expect(entry).not.toHaveProperty('legalName')
+        expect(entry).not.toHaveProperty('parentOrganization')
+      }
     }
   }
   return nodes
@@ -53,6 +60,10 @@ it.each([...routes, notFoundRoute])('serves a complete static HTML document for 
   expect(doc.querySelectorAll('main')).toHaveLength(1)
   expect(doc.querySelectorAll('h1')).toHaveLength(1)
   expect(doc.querySelector('main h1')?.textContent?.trim()).not.toBe('')
+  expect(doc.querySelector('.site-footer .footer-end small')?.textContent).toBe('CREST & CARAT™ © ALL RIGHTS RESERVED')
+  const logo = doc.querySelector('.site-header .wordmark img')
+  expect(logo?.getAttribute('alt')).toBe('CREST & CARAT')
+  expect(logo?.getAttribute('src')).toBe('/images/crest-carat-wordmark.svg')
   const ids = [...doc.querySelectorAll('[id]')].map(({ id }) => id)
   expect(new Set(ids).size).toBe(ids.length)
   expect(doc.querySelector('meta[name="robots"]')?.getAttribute('content')?.split(', ')[0])
@@ -83,13 +94,29 @@ it.each([...routes, notFoundRoute])('serves a complete static HTML document for 
     expect(existsSync(fromDist(image.pathname.slice(1)))).toBe(true)
   }
   const types = schemaNodes(doc)
-  expect(types).toEqual(expect.arrayContaining(['Organization', 'WebSite']))
+  expect(types).toEqual(expect.arrayContaining(['Organization', 'Brand', 'WebSite']))
   expect(types.includes('BreadcrumbList')).toBe(route.breadcrumbs.length > 1)
   expect(types.includes('FAQPage')).toBe(route.path === '/shipping-delivery/')
   expect(types.includes('ItemList')).toBe(route.kind === 'high-jewelry')
   expect(types).not.toContain('Product')
   expect(types).not.toContain('Offer')
 })
+
+it('ships a standalone wordmark with native dimensions that match the header', () => {
+  const logo = fromRoute('/').querySelector('.site-header .wordmark img')
+  const svg = parse(readDist('images/crest-carat-wordmark.svg'), 'image/svg+xml')
+  expect(svg.querySelector('title')?.textContent).toBe('CREST & CARAT')
+  expect(svg.documentElement.getAttribute('viewBox')).toBe(`0 0 ${logo?.getAttribute('width')} ${logo?.getAttribute('height')}`)
+})
+
+it.each(['/privacy/', '/terms/', '/custom-orders-final-sale/', '/shipping-delivery/'])(
+  'identifies the house and concierge on %s', (path) => {
+    const main = fromRoute(path).querySelector('main')
+    expect(main?.textContent).toContain('CREST & CARAT')
+    expect(main?.querySelector('a[href="mailto:privateclient@evercrest.vip"]')).not.toBeNull()
+    if (path === '/privacy/' || path === '/terms/') expect(main?.textContent).toContain('carat.evercrest.vip')
+  },
+)
 
 it('uses unique page titles and descriptions, including the static 404', () => {
   const pages = [...routes, notFoundRoute].map(({ path }) => fromRoute(path))

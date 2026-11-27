@@ -231,6 +231,11 @@ try {
   const auth = { Authorization: `Bearer ${shipmentSecret}` };
   await json(await post('admin/shipments', shipment, auth));
   await json(await post('admin/shipments', shipment, auth));
+  const shipmentEmail = await db.prepare("SELECT payload_json FROM email_outbox WHERE kind = 'shipment'").first();
+  assert(shipmentEmail);
+  const { html, text } = JSON.parse(shipmentEmail.payload_json);
+  assert(text.endsWith('CREST & CARAT™ © ALL RIGHTS RESERVED'));
+  assert.match(html, /<footer>[\s\S]*CREST &amp; CARAT™ © ALL RIGHTS RESERVED[\s\S]*<\/footer>/);
   const tracked = await json(await post('track', tracking));
   assert.equal(tracked.checkoutUrl, null);
   assert.equal(tracked.shipments.length, 1);

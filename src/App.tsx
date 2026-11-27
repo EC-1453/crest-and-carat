@@ -1,6 +1,7 @@
 import { Component, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowRight, ChevronRight, Gem, Menu, MessageCircle, ShieldCheck, ShoppingBag, X } from 'lucide-react'
 import { AppDownload, PwaRegistration } from './app-install'
+import { BRAND_NAME, COPYRIGHT_NOTICE, WORDMARK_PATH } from './brand'
 import { collections } from './catalog'
 import type { PrerenderedOffer } from './catalog-types'
 import { CollectionCard } from './collection-card'
@@ -36,7 +37,7 @@ const houseLinks = [
 function Wordmark({ footer = false }: { footer?: boolean }) {
   return (
     <a className={`wordmark${footer ? ' wordmark--footer' : ''}`} href="/" aria-label="CREST & CARAT home">
-      <img src="/images/wordmark.svg" width="661" height="112" alt="CREST & CARAT, an Evercrest VIP House" />
+      <img src={WORDMARK_PATH} width="661" height="100" alt={BRAND_NAME} />
     </a>
   )
 }
@@ -119,7 +120,6 @@ function HomePage() {
       <section className="hero container" aria-labelledby="home-heading">
         <div className="hero-editorial">
           <div className="hero-copy">
-            <p className="eyebrow hero-label">An Evercrest VIP House</p>
             <h1 id="home-heading">High jewelry, <em>made personal.</em></h1>
             <p className="hero-materials">Explore 18K and 22K gold, natural gemstones, and fine jewelry designed for the occasions you’ll remember.</p>
             <div className="hero-actions">
@@ -207,7 +207,7 @@ function SiteFooter() {
       <div className="container footer-links">
         <div className="footer-house">
           <Wordmark footer />
-          <p>High jewelry and personalized fine jewelry by CREST &amp; CARAT, an Evercrest VIP House.</p>
+          <p>An independent house for high jewelry and personalized fine jewelry.</p>
         </div>
         <nav aria-label="Client services">
           <h2>Client Services</h2>
@@ -219,7 +219,7 @@ function SiteFooter() {
         </nav>
       </div>
       <div className="container footer-end">
-        <small>© Evercrest VIP LLC. All rights reserved.</small>
+        <small>{COPYRIGHT_NOTICE}</small>
         <div><a href="/privacy/">Privacy</a><a href="/terms/">Terms &amp; Conditions</a></div>
         <small>USD · English</small>
       </div>

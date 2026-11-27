@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { TrackOrder } from './commerce/track-order';
-import { BUSINESS_ADDRESS, BUSINESS_NAME, FINAL_SALE_NOTICE, SUPPORT_EMAIL } from './business';
+import { BUSINESS_ADDRESS, FINAL_SALE_NOTICE, SUPPORT_EMAIL } from './business';
 import { shippingFaq } from './editorial-meta';
 import './editorial.css';
 
@@ -107,7 +107,7 @@ const entries: readonly EditorialEntry[] = [
         id: 'jewelry-with-a-story',
         heading: 'Jewelry with a story',
         content: <>
-          <p>CREST & CARAT is operated by {BUSINESS_NAME}. Our collection brings together personal fine jewelry and jeweled objects, from name necklaces and monogram signets to pearls and pieces selected for evening wear. We start with the occasion and the person wearing the piece.</p>
+          <p>CREST & CARAT is an independent jewelry house. Our collection brings together personal fine jewelry and jeweled objects, from name necklaces and monogram signets to pearls and pieces selected for evening wear. We start with the occasion and the person wearing the piece.</p>
           <p>A name belongs to the wearer, a pair of coordinates belongs to a memory, and a pearl can carry the story of an occasion long after the evening is over. The collection is organized by material so you can begin with the metal, gemstone or object that suits the gift.</p>
         </>,
       },
@@ -187,7 +187,7 @@ const entries: readonly EditorialEntry[] = [
         id: 'operator-and-inquiries',
         heading: 'The house and your inquiries',
         content: <>
-          <p>CREST & CARAT is operated by {BUSINESS_NAME}. Questions about these terms or a proposed order can be sent to <SupportLink />.</p>
+          <p>These terms apply to inquiries and orders with CREST & CARAT through <a href="/">carat.evercrest.vip</a>. For questions about these terms or a proposed order, email <SupportLink />.</p>
           {BUSINESS_ADDRESS && <address>{BUSINESS_ADDRESS}</address>}
           <p>An inquiry starts a conversation about a piece. For an orderable item, the confirmed product details, selected options, total charges and estimated schedule are shown or supplied before payment. Images identified as concepts illustrate a style, with approved item images used for pieces accepting orders.</p>
         </>,
@@ -221,7 +221,7 @@ const entries: readonly EditorialEntry[] = [
     path: '/custom-orders-final-sale/',
     eyebrow: 'Client care',
     heading: 'Custom Orders & Final Sale',
-    intro: 'Your piece is made to the details you approve. We help you check those details before the order is placed.',
+    intro: 'Your custom CREST & CARAT piece is made to the details you approve. We help you check those details before the order is placed.',
     sections: [
       {
         id: 'before-you-order',
@@ -251,7 +251,7 @@ const entries: readonly EditorialEntry[] = [
     path: '/shipping-delivery/',
     eyebrow: 'Client care',
     heading: 'Shipping & Delivery',
-    intro: 'Insured delivery in the United States and International / Gulf Express where confirmed for your piece and destination.',
+    intro: 'CREST & CARAT offers insured delivery in the United States and International / Gulf Express where confirmed for your piece and destination.',
     sections: [
       {
         id: 'production-and-transit',
@@ -322,7 +322,7 @@ const entries: readonly EditorialEntry[] = [
         id: 'who-is-responsible',
         heading: 'Who is responsible',
         content: <>
-          <p>{BUSINESS_NAME} operates CREST & CARAT. You can contact us about your information or marketing choices at <SupportLink />.</p>
+          <p>CREST & CARAT is responsible for the information described in this policy. For questions about your information or marketing choices on <a href="/">carat.evercrest.vip</a>, email <SupportLink />.</p>
           {BUSINESS_ADDRESS && <address>{BUSINESS_ADDRESS}</address>}
         </>,
       },

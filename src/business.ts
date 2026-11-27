@@ -1,4 +1,3 @@
-export const BUSINESS_NAME = 'Evercrest VIP LLC';
 export const BUSINESS_ADDRESS = import.meta.env.VITE_BUSINESS_ADDRESS?.trim() || '';
 export const SUPPORT_EMAIL = 'privateclient@evercrest.vip';
 export const SUPPORT_ALIAS = import.meta.env.VITE_SUPPORT_ALIAS?.trim() || '';

@@ -1,6 +1,6 @@
 # CREST & CARAT
 
-CREST & CARAT is a jewelry storefront for Evercrest VIP LLC. Vite builds static HTML and assets for Cloudflare Pages. A separate Cloudflare Worker in `worker/` serves the commerce API and stores orders, subscriber consent and fulfillment records in D1.
+CREST & CARAT is an independent jewelry house. Vite builds static HTML and assets for Cloudflare Pages. A separate Cloudflare Worker in `worker/` serves the commerce API and stores orders, subscriber consent and fulfillment records in D1.
 
 ## Run locally
 

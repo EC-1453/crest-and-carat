@@ -1,8 +1,8 @@
 export const editorialPages = [
   {
     path: '/about/',
-    title: 'About CREST & CARAT | Bespoke Jewelry by Evercrest VIP',
-    description: 'Meet CREST & CARAT, an Evercrest VIP house for personalized fine jewelry, heirloom gifting and jeweled objects for clients in the US, UK and Gulf.',
+    title: 'About CREST & CARAT | Independent Fine Jewelry House',
+    description: 'Meet CREST & CARAT, an independent jewelry house for personalized fine jewelry, heirloom gifting and jeweled objects for clients in the US, UK and Gulf.',
     label: 'About',
   },
   {
@@ -19,7 +19,7 @@ export const editorialPages = [
   },
   {
     path: '/terms/',
-    title: 'Terms & Conditions | CREST & CARAT by Evercrest VIP LLC',
+    title: 'Terms & Conditions | CREST & CARAT',
     description: 'Read the CREST & CARAT terms for bespoke inquiries, order approval, payment, confirmed lead times and insured delivery.',
     label: 'Terms & Conditions',
   },
@@ -38,7 +38,7 @@ export const editorialPages = [
   {
     path: '/privacy/',
     title: 'Privacy & Marketing Choices | CREST & CARAT',
-    description: 'Learn how Evercrest VIP LLC handles CREST & CARAT inquiries, order information and consent for the Private List.',
+    description: 'Learn how CREST & CARAT handles your inquiries, order information and consent for the Private List.',
     label: 'Privacy',
   },
   {

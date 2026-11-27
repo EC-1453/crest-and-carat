@@ -1,7 +1,8 @@
+import { BRAND_NAME } from './brand'
 import { collectionPath, collections, productPath, products } from './catalog'
 import { editorialPages } from './editorial-meta'
 
-export const SITE_NAME = 'CREST & CARAT'
+export const SITE_NAME = BRAND_NAME
 export const SITE_ORIGIN = 'https://carat.evercrest.vip'
 
 export interface Breadcrumb {
@@ -59,7 +60,7 @@ export const routes: readonly Route[] = [
     ...shopCrumb,
     kind: 'shop',
     title: 'Fine Jewelry & High Jewelry Collections',
-    description: 'Browse precious gold heirlooms, diamond and gemstone designs, and personalized jewelry from CREST & CARAT, an Evercrest VIP house.',
+    description: 'Browse precious gold heirlooms, diamond and gemstone designs, and personalized jewelry from CREST & CARAT.',
   }),
   interiorRoute({
     ...highJewelryCrumb,
