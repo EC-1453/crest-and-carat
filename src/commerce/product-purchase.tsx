@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { FINAL_SALE_NOTICE } from '../business';
-import type { Product } from '../catalog-types';
-import { engravingIssue, formatUsd, type CatalogItem } from './api';
+import type { PrerenderedOffer, Product } from '../catalog-types';
+import { engravingIssue, formatUsd, purchasableItems, type CatalogItem } from './api';
 import { addToBag } from './bag';
 import { useCatalog } from './use-catalog';
 
@@ -93,12 +93,16 @@ function AddToBag({ items }: { items: CatalogItem[] }) {
   );
 }
 
-export function ProductPurchase({ product }: { product: Product }) {
+export function ProductPurchase({ product, prerenderedOffer }: { product: Product; prerenderedOffer?: PrerenderedOffer }) {
   const { state, reload } = useCatalog(product.image.approved);
   if (!product.image.approved) return <Inquiry slug={product.slug} />;
 
   if (state.status === 'loading') return (
     <div className="catalog-inquiry">
+      {prerenderedOffer && <>
+        <p className="catalog-help">{prerenderedOffer.variantName}</p>
+        <p className="catalog-price">{formatUsd(prerenderedOffer.priceCents)} <span>USD</span></p>
+      </>}
       <p className="catalog-help" role="status">Checking purchase options…</p>
       <Inquiry slug={product.slug} />
     </div>
@@ -111,9 +115,6 @@ export function ProductPurchase({ product }: { product: Product }) {
     </div>
   );
 
-  const items = state.catalog.items.filter((item) => item.productSlug === product.slug);
-  if (!items.length || !state.catalog.shipping.length || !state.catalog.processors.length || !state.catalog.termsVersion) {
-    return <Inquiry slug={product.slug} />;
-  }
-  return <AddToBag items={items} />;
+  const items = purchasableItems(state.catalog, product.slug);
+  return items.length ? <AddToBag items={items} /> : <Inquiry slug={product.slug} />;
 }

@@ -108,6 +108,7 @@ export const routes: readonly Route[] = [
   ...editorialPages.map((page) => interiorRoute(
     { ...page, kind: 'editorial' },
     page.path.startsWith('/guides/') && page.path !== guideCrumb.path ? [guideCrumb] : [],
+    page.path !== '/track-order/',
   )),
 ]
 

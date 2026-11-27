@@ -27,6 +27,7 @@ export type VerifiedStone =
 export interface VerifiedProductDetails {
   readonly dimensions: string;
   readonly stone?: VerifiedStone;
+  readonly availability?: 'InStock';
 }
 
 export interface Product {
@@ -45,4 +46,10 @@ export interface Product {
 export interface PublicCatalog {
   readonly collections: readonly Collection[];
   readonly products: readonly Product[];
+}
+
+export interface PrerenderedOffer {
+  readonly productSlug: string;
+  readonly variantName: string;
+  readonly priceCents: number;
 }

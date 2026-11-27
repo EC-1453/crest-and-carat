@@ -139,7 +139,7 @@ function validStone(product: SourceProduct, stone: VerifiedStone | undefined): b
 function verifiedDetails(product: SourceProduct): VerifiedProductDetails | undefined {
   const details = product.approved_details;
   if (!details) return;
-  const { image, description, materials, dimensions, stone } = details;
+  const { image, description, materials, dimensions, stone, availability } = details;
   if (!image.approved || !description.trim() || !materials.trim() || !dimensions.trim()) {
     throw new Error(`Catalog ${product.slug}: approved details require exact-item imagery and confirmed specifications`);
   }
@@ -149,7 +149,7 @@ function verifiedDetails(product: SourceProduct): VerifiedProductDetails | undef
     throw new Error(`Catalog ${product.slug}: approved imagery must identify a distinct exact-item image served by the storefront`);
   }
   if (!validStone(product, stone)) throw new Error(`Catalog ${product.slug}: stone details are incomplete or conflict with the item description`);
-  return { dimensions, ...(stone ? { stone: publicStone(stone) } : {}) };
+  return { dimensions, ...(stone ? { stone: publicStone(stone) } : {}), ...(availability === 'InStock' ? { availability } : {}) };
 }
 
 export function compileCatalog(
