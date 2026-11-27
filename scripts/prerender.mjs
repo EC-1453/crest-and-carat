@@ -2,6 +2,7 @@ import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  loadVerifiedOffers,
   notFoundRoute,
   renderDocument,
   renderHeaders,
@@ -19,6 +20,8 @@ const [template, assets, manifestText] = await Promise.all([
   readFile(manifestPath, 'utf8'),
 ])
 const manifest = JSON.parse(manifestText)
+const preview = process.env.CF_PAGES === '1' && Boolean(process.env.CF_PAGES_BRANCH) && process.env.CF_PAGES_BRANCH !== 'main'
+const offers = await loadVerifiedOffers(!preview && process.env.CARAT_PUBLISH_VERIFIED_OFFERS === '1')
 const fonts = assets.filter((file) => file.endsWith('.woff2')).map((file) => `/assets/${file}`)
 const allRoutes = [...routes, notFoundRoute]
 const paths = new Set()
@@ -56,7 +59,7 @@ for (const route of allRoutes) {
   if (paths.has(route.path)) throw new Error(`Duplicate public route: ${route.path}`)
   paths.add(route.path)
 
-  const document = await renderDocument(template, route, fonts, routeAssets(route.kind))
+  const document = await renderDocument(template, route, fonts, routeAssets(route.kind), { preview, offers })
   const headings = document.match(/<h1(?:\s|>)/gi) ?? []
   if (headings.length !== 1) throw new Error(`${route.path} has ${headings.length} H1 headings. Expected one.`)
 
@@ -69,10 +72,10 @@ for (const route of allRoutes) {
 }
 
 await Promise.all([
-  writeFile(join(output, 'sitemap.xml'), renderSitemap()),
-  writeFile(join(output, 'robots.txt'), renderRobots()),
-  writeFile(join(output, 'merchant-feed.xml'), renderMerchantFeed()),
-  writeFile(join(output, '_headers'), renderHeaders(await readFile(join(output, '_headers'), 'utf8'))),
+  writeFile(join(output, 'sitemap.xml'), renderSitemap(preview)),
+  writeFile(join(output, 'robots.txt'), renderRobots(preview)),
+  writeFile(join(output, 'merchant-feed.xml'), renderMerchantFeed(offers)),
+  writeFile(join(output, '_headers'), renderHeaders(await readFile(join(output, '_headers'), 'utf8'), preview)),
   removeSpaFallback(),
   rm(manifestPath),
 ])

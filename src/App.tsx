@@ -2,6 +2,7 @@ import { Component, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronRight, Gem, Menu, MessageCircle, ShieldCheck, ShoppingBag, X } from 'lucide-react'
 import { AppDownload, PwaRegistration } from './app-install'
 import { collections } from './catalog'
+import type { PrerenderedOffer } from './catalog-types'
 import { CollectionCard } from './collection-card'
 import { ContactPage, PrivateList, PrivateListDrawer } from './concierge'
 import { useBag } from './commerce/bag'
@@ -257,7 +258,7 @@ class PageBoundary extends Component<{ children: ReactNode }, { failed: boolean 
   }
 }
 
-export async function resolveRouteContent(route: Route): Promise<ReactNode> {
+export async function resolveRouteContent(route: Route, prerenderedOffer?: PrerenderedOffer): Promise<ReactNode> {
   switch (route.kind) {
     case 'home': return <HomePage />
     case 'shop': {
@@ -270,7 +271,7 @@ export async function resolveRouteContent(route: Route): Promise<ReactNode> {
     }
     case 'product': {
       const { ProductPage } = await import('./catalog-pages')
-      return <ProductPage slug={route.slug ?? ''} />
+      return <ProductPage slug={route.slug ?? ''} prerenderedOffer={prerenderedOffer} />
     }
     case 'bag': {
       const { BagPage } = await import('./commerce/bag-page')

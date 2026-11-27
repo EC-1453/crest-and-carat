@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { collectionPath, collections, productPath, products } from './catalog';
 import { CatalogPhoto, CollectionCard } from './collection-card';
-import type { Product, VerifiedStone } from './catalog-types';
+import type { PrerenderedOffer, Product, VerifiedStone } from './catalog-types';
 import { ProductPurchase } from './commerce/product-purchase';
 import './commerce/commerce.css';
 
@@ -89,7 +89,7 @@ function Detail({ term, children }: { term: string; children?: ReactNode }) {
   return <div><dt>{term}</dt><dd>{children}</dd></div>;
 }
 
-export function ProductPage({ slug }: { slug: string }) {
+export function ProductPage({ slug, prerenderedOffer }: { slug: string; prerenderedOffer?: PrerenderedOffer }) {
   const product = products.find((item) => item.slug === slug);
   if (!product) return <h1>Piece unavailable</h1>;
   const details = product.verifiedDetails;
@@ -112,7 +112,7 @@ export function ProductPage({ slug }: { slug: string }) {
           <Detail term="Stone details">{details?.stone ? stoneSummary(details.stone) : undefined}</Detail>
           <Detail term="Grading report">{details?.stone?.family === 'diamond' ? details.stone.gradingReport : undefined}</Detail>
         </dl>
-        <ProductPurchase product={product} />
+        <ProductPurchase product={product} prerenderedOffer={prerenderedOffer} />
         <ul className="catalog-product__links" aria-label="Related collections">
           {collectionLinks.map((collection) => <li key={collection.slug}><a href={collectionPath(collection.slug)}>{collection.name}</a></li>)}
         </ul>

@@ -3,8 +3,10 @@ import { App, resolveRouteContent } from './App'
 import { googlePlayUrl, iosAppStoreUrl } from './app-install'
 import { BUSINESS_ADDRESS, BUSINESS_NAME, SUPPORT_EMAIL } from './business'
 import { productPath, products } from './catalog'
-import type { Product } from './catalog-types'
+import type { PrerenderedOffer, Product } from './catalog-types'
 import { parseApiBase } from './commerce/api-base'
+import { parseCatalog, purchasableItems, type Catalog, type CatalogItem } from './commerce/api'
+import { record } from './commerce/http'
 import { shippingFaq } from './editorial-meta'
 import { homeHero } from './home-media'
 import { notFoundRoute, routes, SITE_NAME, SITE_ORIGIN, type Route } from './routes'
@@ -55,11 +57,49 @@ function isGuide(route: Route): boolean {
   return route.kind === 'editorial' && route.path.startsWith('/guides/') && route.path !== '/guides/'
 }
 
-function productForRoute(route: Route): Product | undefined {
-  return route.kind === 'product' ? products.find(({ slug }) => slug === route.slug) : undefined
+interface VerifiedOffer {
+  product: Product
+  item: CatalogItem
+  destinations: readonly string[]
 }
 
-function productSchema(product: Product): SchemaNode {
+export function verifiedOffers(catalog: Catalog): readonly VerifiedOffer[] {
+  const shippingCountries = new Set(catalog.shipping.map(({ country }) => country))
+  return products.flatMap((product) => {
+    if (!product.image.approved || product.verifiedDetails?.availability !== 'InStock') return []
+    const items = purchasableItems(catalog, product.slug)
+    // This page has one canonical item URL and one approved image set. Publish when it represents a single exact variant.
+    const [item] = items
+    if (items.length !== 1 || item.name !== product.name) return []
+    return [{ product, item, destinations: item.destinations.filter((country) => shippingCountries.has(country)) }]
+  })
+}
+
+export async function loadVerifiedOffers(enabled: boolean): Promise<readonly VerifiedOffer[]> {
+  if (!enabled) return []
+
+  async function read(path: '/api/health' | '/api/catalog'): Promise<unknown> {
+    const response = await fetch(absoluteUrl(path), {
+      cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(10_000),
+    })
+    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+      throw new Error(`The production Worker did not return catalog verification data from ${path}.`)
+    }
+    return response.json()
+  }
+
+  const health = await read('/api/health')
+  if (!record(health) || health.ok !== true || health.environment !== 'production') {
+    throw new Error('Offer publication requires the production commerce Worker.')
+  }
+  return verifiedOffers(parseCatalog(await read('/api/catalog')))
+}
+
+function offerPrice(item: CatalogItem): string {
+  return (item.priceCents / 100).toFixed(2)
+}
+
+function productSchema({ product, item, destinations }: VerifiedOffer): SchemaNode {
   const url = absoluteUrl(productPath(product.slug))
   const stone = product.verifiedDetails?.stone
   return {
@@ -71,14 +111,24 @@ function productSchema(product: Product): SchemaNode {
     image: [absoluteUrl(product.image.src)],
     material: product.materials,
     category: product.category,
+    brand: { '@id': brandId },
+    sku: item.sku,
     ...(stone ? { additionalProperty: { '@type': 'PropertyValue', name: 'Stone', value: stone.description } } : {}),
+    offers: {
+      '@type': 'Offer',
+      url,
+      price: offerPrice(item),
+      priceCurrency: 'USD',
+      availability: 'https://schema.org/InStock',
+      eligibleRegion: destinations,
+      seller: { '@id': organizationId },
+    },
   }
 }
 
-function pageSchema(route: Route): SchemaNode {
+function pageSchema(route: Route, offer: VerifiedOffer | undefined): SchemaNode {
   const url = absoluteUrl(route.path)
   const guide = isGuide(route)
-  const product = productForRoute(route)
   const appLinks = [iosAppStoreUrl, googlePlayUrl].filter(Boolean)
   const trailId = `${url}#breadcrumb`
   const graph: SchemaNode[] = [
@@ -112,7 +162,7 @@ function pageSchema(route: Route): SchemaNode {
       inLanguage: 'en',
       isPartOf: { '@id': websiteId },
       ...(route.breadcrumbs.length > 1 ? { breadcrumb: { '@id': trailId } } : {}),
-      ...(product?.image.approved ? { mainEntity: { '@id': `${url}#product` } } : {}),
+      ...(offer ? { mainEntity: { '@id': `${url}#product` } } : {}),
     },
   ]
 
@@ -170,12 +220,12 @@ function pageSchema(route: Route): SchemaNode {
     })
   }
 
-  if (product?.image.approved) graph.push(productSchema(product))
+  if (offer) graph.push(productSchema(offer))
 
   return { '@context': 'https://schema.org', '@graph': graph }
 }
 
-function metadata(route: Route): string {
+function metadata(route: Route, preview: boolean, offer: VerifiedOffer | undefined): string {
   const title = escapeMarkup(getTitle(route))
   const description = escapeMarkup(route.description)
   const url = escapeMarkup(absoluteUrl(route.path))
@@ -184,16 +234,17 @@ function metadata(route: Route): string {
   const imageUrl = escapeMarkup(absoluteUrl(image.src))
   const imageAlt = escapeMarkup(image.alt)
   const tags = [`<title>${title}</title>`, `<meta name="description" content="${description}">`]
+  const robots = preview ? 'noindex, nofollow' : route.indexable ? 'index, follow, max-image-preview:large' : 'noindex, follow'
 
   if (route.kind === 'not-found') {
-    return [...tags, '<meta name="robots" content="noindex, follow">'].join('\n    ')
+    return [...tags, `<meta name="robots" content="${robots}">`].join('\n    ')
   }
 
   tags.push(
     `<link rel="canonical" href="${url}">`,
     `<link rel="alternate" hreflang="en" href="${url}">`,
     `<link rel="alternate" hreflang="x-default" href="${url}">`,
-    `<meta name="robots" content="${route.indexable ? 'index, follow, max-image-preview:large' : 'noindex, follow'}">`,
+    `<meta name="robots" content="${robots}">`,
     `<meta property="og:type" content="${isGuide(route) ? 'article' : 'website'}">`,
     `<meta property="og:site_name" content="${escapeMarkup(SITE_NAME)}">`,
     `<meta property="og:locale" content="en_US">`,
@@ -211,9 +262,9 @@ function metadata(route: Route): string {
     `<meta name="twitter:image:alt" content="${imageAlt}">`,
   )
 
-  if (verification) tags.push(`<meta name="google-site-verification" content="${escapeMarkup(verification)}">`)
+  if (verification && !preview) tags.push(`<meta name="google-site-verification" content="${escapeMarkup(verification)}">`)
 
-  const schema = JSON.stringify(pageSchema(route)).replaceAll('<', '\\u003c')
+  const schema = JSON.stringify(pageSchema(route, offer)).replaceAll('<', '\\u003c')
   tags.push(`<script type="application/ld+json">${schema}</script>`)
   return tags.join('\n    ')
 }
@@ -246,9 +297,20 @@ function preloads(route: Route, fontAssets: readonly string[], routeAssets: Rout
   return tags.length ? `\n    ${tags.join('\n    ')}` : ''
 }
 
-export async function renderDocument(template: string, route: Route, fontAssets: readonly string[], routeAssets: RouteAssets): Promise<string> {
-  const head = metadata(route) + preloads(route, fontAssets, routeAssets, template)
-  const content = await resolveRouteContent(route)
+export async function renderDocument(
+  template: string,
+  route: Route,
+  fontAssets: readonly string[],
+  routeAssets: RouteAssets,
+  { preview = false, offers = [] }: { preview?: boolean; offers?: readonly VerifiedOffer[] } = {},
+): Promise<string> {
+  const offer = !preview && route.kind === 'product' ? offers.find(({ product }) => product.slug === route.slug) : undefined
+  const head = metadata(route, preview, offer) + preloads(route, fontAssets, routeAssets, template)
+  const item = offer?.item
+  const prerenderedOffer: PrerenderedOffer | undefined = item && {
+    productSlug: item.productSlug, variantName: item.variantName, priceCents: item.priceCents,
+  }
+  const content = await resolveRouteContent(route, prerenderedOffer)
   const body = renderToString(<App path={route.path}>{content}</App>)
   const root = /<div id="root">\s*(?:<!--app-html-->)?\s*<\/div>/
 
@@ -258,19 +320,33 @@ export async function renderDocument(template: string, route: Route, fontAssets:
     ? template.replace('<!--page-head-->', () => head)
     : template.replace('</head>', () => `    ${head}\n  </head>`)
 
-  return document.replace(root, () => `<div id="root" data-prerendered-path="${escapeMarkup(route.path)}">${body}</div>`)
+  const offerAttribute = prerenderedOffer ? ` data-prerendered-offer="${escapeMarkup(JSON.stringify(prerenderedOffer))}"` : ''
+  return document.replace(root, () => `<div id="root" data-prerendered-path="${escapeMarkup(route.path)}"${offerAttribute}>${body}</div>`)
 }
 
-export function renderSitemap(): string {
-  const entries = routes.filter(({ indexable }) => indexable).map(({ path }) => `  <url><loc>${escapeMarkup(absoluteUrl(path))}</loc></url>`)
+export function renderSitemap(preview = false): string {
+  const entries = preview ? [] : routes.filter(({ indexable }) => indexable).map(({ path }) => `  <url><loc>${escapeMarkup(absoluteUrl(path))}</loc></url>`)
   return ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">', ...entries, '</urlset>', ''].join('\n')
 }
 
-export function renderRobots(): string {
-  return `User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${SITE_ORIGIN}/sitemap.xml\n`
+export function renderRobots(preview = false): string {
+  return `User-agent: *\nAllow: /\nDisallow: /api/\n${preview ? '' : `Sitemap: ${SITE_ORIGIN}/sitemap.xml\n`}`
 }
 
-export function renderMerchantFeed(): string {
+export function renderMerchantFeed(offers: readonly VerifiedOffer[] = []): string {
+  const items = offers.flatMap(({ product, item }) => [
+    '    <item>',
+    `      <g:id>${escapeMarkup(product.slug)}</g:id>`,
+    `      <g:title>${escapeMarkup(product.name)}</g:title>`,
+    `      <g:description>${escapeMarkup(product.description)}</g:description>`,
+    `      <g:link>${escapeMarkup(absoluteUrl(productPath(product.slug)))}</g:link>`,
+    `      <g:image_link>${escapeMarkup(absoluteUrl(product.image.src))}</g:image_link>`,
+    `      <g:price>${offerPrice(item)} USD</g:price>`,
+    '      <g:availability>in_stock</g:availability>',
+    '      <g:condition>new</g:condition>',
+    `      <g:brand>${escapeMarkup(SITE_NAME)}</g:brand>`,
+    '    </item>',
+  ])
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">',
@@ -278,13 +354,15 @@ export function renderMerchantFeed(): string {
     `    <title>${escapeMarkup(SITE_NAME)}</title>`,
     `    <link>${SITE_ORIGIN}/</link>`,
     '    <description>Verified fine jewelry and jeweled objects available to purchase.</description>',
+    ...items,
     '  </channel>',
     '</rss>',
     '',
   ].join('\n')
 }
 
-export function renderHeaders(template: string): string {
+export function renderHeaders(template: string, preview = false): string {
   const apiOrigin = parseApiBase(import.meta.env.VITE_API_BASE_URL)?.origin
-  return apiOrigin ? template.replace("connect-src 'self';", `connect-src 'self' ${apiOrigin};`) : template
+  const headers = apiOrigin ? template.replace("connect-src 'self';", `connect-src 'self' ${apiOrigin};`) : template
+  return preview ? headers.replace('/*\n', '/*\n  X-Robots-Tag: noindex, nofollow\n') : headers
 }

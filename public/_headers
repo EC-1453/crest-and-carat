@@ -27,6 +27,10 @@
   Cache-Control: no-cache
   X-Robots-Tag: noindex
 
+/offline
+  Cache-Control: no-cache
+  X-Robots-Tag: noindex
+
 /404.html
   X-Robots-Tag: noindex, follow
 
@@ -38,6 +42,16 @@
 /track-order/*
   Cache-Control: no-store
   Referrer-Policy: no-referrer
+  X-Robots-Tag: noindex, follow
+
+/checkout/*
+  Cache-Control: no-store
+  Referrer-Policy: no-referrer
+  X-Robots-Tag: noindex, follow
+
+/preview/*
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
 
 /.well-known/apple-app-site-association
   Cache-Control: no-cache

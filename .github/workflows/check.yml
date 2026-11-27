@@ -17,8 +17,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm run build
+      - run: npm test
       - run: npx tsc --project worker/tsconfig.json
       - run: npx wrangler d1 migrations apply DB --local --config worker/wrangler.toml
       - run: npx wrangler deploy --dry-run --env production --config worker/wrangler.toml
-      - run: node worker/tests/commerce-smoke.mjs

@@ -141,13 +141,23 @@ function isShipment(value: unknown): value is TrackingResult['shipments'][number
   return record(value) && typeof value.carrier === 'string' && typeof value.trackingNumber === 'string' && typeof value.shippedAt === 'string';
 }
 
-export async function loadCatalog(signal: AbortSignal): Promise<Catalog> {
-  const data = await apiRequest('/api/catalog', undefined, signal);
+export function parseCatalog(data: unknown): Catalog {
   if (!record(data) || !Array.isArray(data.items) || !data.items.every(isCatalogItem)
     || !Array.isArray(data.shipping) || !data.shipping.every(isShipping)
     || !Array.isArray(data.processors) || !data.processors.every(isProcessor)
     || (typeof data.termsVersion !== 'string' && data.termsVersion !== null)) throw new Error('Invalid catalog response.');
   return { items: data.items, shipping: data.shipping, processors: data.processors, termsVersion: data.termsVersion };
+}
+
+export async function loadCatalog(signal: AbortSignal): Promise<Catalog> {
+  return parseCatalog(await apiRequest('/api/catalog', undefined, signal));
+}
+
+export function purchasableItems(catalog: Catalog, slug: string): CatalogItem[] {
+  if (!catalog.termsVersion?.trim() || !catalog.processors.length) return [];
+  const countries = new Set(catalog.shipping.map(({ country }) => country));
+  return catalog.items.filter((item) => item.productSlug === slug && item.priceCents > 0
+    && item.destinations.some((country) => countries.has(country)));
 }
 
 export async function requestQuote(input: QuoteInput, signal: AbortSignal): Promise<QuoteResult> {
