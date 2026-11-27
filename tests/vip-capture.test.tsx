@@ -70,6 +70,22 @@ it('sends the VIP email and explicit consent to the Worker, then focuses the con
   expect(document.activeElement).toBe(container.querySelector('.concierge-result'))
 })
 
+it('hides the spam trap and keeps a native required checkbox behind the consent styling', () => {
+  const form = container.querySelector('form')
+  if (!form) throw new Error('The sign-up form is missing.')
+
+  const trap = form.querySelector<HTMLElement>('.concierge-honeypot')
+  const checkbox = form.querySelector<HTMLInputElement>('input[name="marketingConsent"]')
+  expect(trap?.hidden).toBe(true)
+  expect(trap?.getAttribute('aria-hidden')).toBe('true')
+  expect(new FormData(form).get('website')).toBe('')
+  expect(checkbox?.type).toBe('checkbox')
+  expect(checkbox?.required).toBe(true)
+  expect(checkbox?.checked).toBe(false)
+  expect(checkbox?.labels?.[0]?.textContent).toBe('I agree to receive marketing emails from CREST & CARAT. I can unsubscribe at any time.')
+  expect(checkbox?.nextElementSibling?.getAttribute('aria-hidden')).toBe('true')
+})
+
 it('offers an email fallback and reuses the request ID when the same signup is retried', async () => {
   const fetch = vi.fn<typeof globalThis.fetch>()
     .mockRejectedValueOnce(new Error('Simulated network loss.'))

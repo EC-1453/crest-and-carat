@@ -1,21 +1,18 @@
 import { realpathSync, statSync, writeFileSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { compileCatalog } from '../src/catalog-source.ts';
+import { catalogImageSources, compileCatalog } from '../src/catalog-source.ts';
 
 const catalog = compileCatalog();
 const publicDirectory = realpathSync(fileURLToPath(new URL('../public/', import.meta.url)));
 
-for (const product of catalog.products) {
-  if (!product.image.approved) continue;
-  const { src, srcSet, avifSrcSet } = product.image;
-  const sources = [src, ...[srcSet, avifSrcSet].flatMap((set) => set?.split(',').map((part) => part.trim().split(/\s+/u)[0]) ?? [])];
-  for (const source of sources) {
+for (const { slug, image } of [...catalog.products, ...catalog.collections]) {
+  for (const source of new Set(catalogImageSources(image))) {
     try {
       const actualPath = realpathSync(resolve(publicDirectory, `.${source}`));
       if (!actualPath.startsWith(`${publicDirectory}${sep}`) || !statSync(actualPath).isFile()) throw new Error('Invalid asset path');
     } catch {
-      throw new Error(`Catalog ${product.slug}: approved exact-item image is missing or outside public/ (${source})`);
+      throw new Error(`Catalog ${slug}: image is missing or outside public/ (${source})`);
     }
   }
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { openCheckout } from '../app-install';
 import { FINAL_SALE_NOTICE } from '../business';
 import { products } from '../catalog';
+import { ConsentCheckbox } from '../concierge';
 import { createOrder, engravingIssue, formatUsd, requestQuote, type Address, type BagLine, type Catalog, type CatalogItem, type OrderResult, type QuoteInput, type QuoteResult } from './api';
 import { changeBagEngraving, clearOrderedLines, updateBag, useBag } from './bag';
 import { CommerceError } from './http';
@@ -305,19 +306,22 @@ function Checkout({ lines, catalog, refreshCatalog }: { lines: readonly BagLine[
                     </select>
                   </label>
                 </div>
-                <label className="catalog-opt-in"><input type="checkbox" checked={marketingOptIn} onChange={(event) => { resetReview(); setMarketingOptIn(event.target.checked); }} />
-                  <span>Send me occasional notes from the Private List. I can unsubscribe at any time.</span>
-                </label>
+                <ConsentCheckbox checked={marketingOptIn} onChange={(event) => { resetReview(); setMarketingOptIn(event.target.checked); }}>
+                  Send me occasional notes from the Private List. I can unsubscribe at any time.
+                </ConsentCheckbox>
                 <p className="catalog-help">Payment details are entered on the provider’s secure payment page.</p>
               </fieldset>
               {chosenReview && (
                 <div className="commerce-panel commerce-approval" ref={reviewHeading} tabIndex={-1}>
                   <OrderReview result={chosenReview} address={trimmedAddress} email={orderDetails.email} processor={payment?.label ?? ''} />
                   {lines.some(({ engraving }) => engraving) && <p className="catalog-help">{FINAL_SALE_NOTICE}</p>}
-                  <label className="catalog-opt-in">
-                    <input type="checkbox" required checked={termsAccepted} disabled={Boolean(loading) || submitted} onChange={(event) => setTermsAccepted(event.target.checked)} />
-                    <span>I confirm my pieces, engraving, delivery address and total. I accept the <a href="/terms/" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a> (version {chosenReview.quote.termsVersion}) and the <a href="/custom-orders-final-sale/" target="_blank" rel="noopener noreferrer">custom order terms</a> where applicable.</span>
-                  </label>
+                  <ConsentCheckbox aria-describedby="checkout-order-terms" required checked={termsAccepted} disabled={Boolean(loading) || submitted}
+                    onChange={(event) => setTermsAccepted(event.target.checked)}>
+                    I confirm my pieces, engraving, delivery address and total, and I accept the terms below.
+                  </ConsentCheckbox>
+                  <p id="checkout-order-terms" className="catalog-help">
+                    Read the <a href="/terms/" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a> (version {chosenReview.quote.termsVersion}) and the <a href="/custom-orders-final-sale/" target="_blank" rel="noopener noreferrer">custom order terms</a> where applicable.
+                  </p>
                 </div>
               )}
               {error && <p className="catalog-field-error" role="alert">{error}</p>}

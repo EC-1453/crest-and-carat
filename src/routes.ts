@@ -21,7 +21,7 @@ export interface Route {
   title: string
   description: string
   label: string
-  kind: 'home' | 'shop' | 'collection' | 'product' | 'bag' | 'contact' | 'app' | 'editorial' | 'not-found'
+  kind: 'home' | 'shop' | 'high-jewelry' | 'collection' | 'product' | 'bag' | 'contact' | 'app' | 'editorial' | 'not-found'
   slug?: string
   breadcrumbs: readonly Breadcrumb[]
   indexable: boolean
@@ -29,7 +29,8 @@ export interface Route {
 }
 
 const homeCrumb: Breadcrumb = { label: 'Home', path: '/' }
-const shopCrumb: Breadcrumb = { label: 'Shop All', path: '/shop/' }
+const shopCrumb: Breadcrumb = { label: 'Collections', path: '/shop/' }
+const highJewelryCrumb: Breadcrumb = { label: 'High Jewelry', path: '/high-jewelry/' }
 const guideCrumb: Breadcrumb = { label: 'Jewelry Guides', path: '/guides/' }
 
 function interiorRoute(
@@ -49,16 +50,23 @@ export const routes: readonly Route[] = [
     path: '/',
     kind: 'home',
     label: 'Home',
-    title: 'Bespoke Fine Jewelry & Gulf Delivery',
-    description: 'Discover personalized fine jewelry in solid gold, sterling silver, platinum, genuine pearls and diamonds. Private gifting inquiries for the US, UK, UAE and Gulf.',
+    title: 'High Jewelry & Bespoke Fine Jewelry',
+    description: 'Explore precious gold, diamond and gemstone commissions alongside personalized fine jewelry. Consult the private concierge about a piece and US, UK or Gulf delivery.',
     breadcrumbs: [],
     indexable: true,
   },
   interiorRoute({
     ...shopCrumb,
     kind: 'shop',
-    title: 'Shop Personalized Fine Jewelry & Jeweled Objects',
-    description: 'Explore gold name necklaces, pearl keepsakes, diamond pendants, monogram rings and jeweled objects. Ask the private concierge about a piece or collection.',
+    title: 'Fine Jewelry & High Jewelry Collections',
+    description: 'Browse precious gold heirlooms, diamond and gemstone designs, and personalized jewelry from CREST & CARAT, an Evercrest VIP house.',
+  }),
+  interiorRoute({
+    ...highJewelryCrumb,
+    kind: 'high-jewelry',
+    title: 'High Jewelry | Precious Gold & Gemstones',
+    description: 'Explore 18K and 22K solid gold, natural diamonds, colored gemstones and fine cultured pearl designs. Request a private dossier to discuss a commission.',
+    image: products.find((product) => product.slug === 'the-lumiere-riviere')?.image,
   }),
   ...collections.map((collection) => interiorRoute({
     path: collectionPath(collection.slug),
@@ -68,12 +76,14 @@ export const routes: readonly Route[] = [
     title: collection.seoTitle,
     description: collection.description,
     image: collection.image,
-  }, [shopCrumb], products.some((product) => product.collections.includes(collection.slug)))),
+  }, [collection.tier === 'high-jewelry' ? highJewelryCrumb : shopCrumb],
+  products.some((product) => product.collections.includes(collection.slug)))),
   ...products.map((product) => {
     const collection = collections.find((item) => item.slug === product.collections[0])
+    const section = product.tier === 'high-jewelry' ? highJewelryCrumb : shopCrumb
     const parents = collection
-      ? [shopCrumb, { label: collection.name, path: collectionPath(collection.slug) }]
-      : [shopCrumb]
+      ? [section, { label: collection.name, path: collectionPath(collection.slug) }]
+      : [section]
     return interiorRoute({
       path: productPath(product.slug),
       kind: 'product',
@@ -81,7 +91,7 @@ export const routes: readonly Route[] = [
       label: product.name,
       title: product.seoTitle,
       description: product.description,
-      image: product.image.approved ? product.image : undefined,
+      image: product.image.approved || product.tier === 'high-jewelry' ? product.image : undefined,
     }, parents)
   }),
   interiorRoute({

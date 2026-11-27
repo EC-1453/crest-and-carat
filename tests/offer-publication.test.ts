@@ -15,8 +15,15 @@ vi.mock('../src/catalog', async (importOriginal) => {
         description: 'Fixture: exact gold piece & engraving.',
         materials: '14K solid gold',
         dimensions: 'Fixture dimensions',
+        metalPurity: '14K',
         ...(product.slug === 'the-sovereign' ? { availability: 'InStock' as const } : {}),
-        image: { ...product.image, src: `/images/fixture-${product.slug}.webp`, approved: true },
+        image: {
+          src: `/images/fixture-${product.slug}.webp`,
+          width: product.image.width,
+          height: product.image.height,
+          alt: 'Approved exact-item fixture photograph',
+          approved: true,
+        },
       },
     } : product,
   ))
@@ -82,6 +89,7 @@ it('publishes matching Product and Offer markup, visible price and Merchant XML 
     expect.objectContaining({
       '@type': 'Product', '@id': `${canonical}#product`, name: 'The Sovereign', sku: 'FIXTURE-001', url: canonical,
       image: ['https://carat.evercrest.vip/images/fixture-the-sovereign.webp'],
+      additionalProperty: [{ '@type': 'PropertyValue', name: 'Metal purity', value: '14K' }],
       offers: {
         '@type': 'Offer', url: canonical, price: '312.50', priceCurrency: 'USD',
         availability: 'https://schema.org/InStock', eligibleRegion: ['AE', 'US'], seller: { '@id': 'https://carat.evercrest.vip/#organization' },
@@ -118,6 +126,21 @@ it('withholds offers with missing approvals, mismatched details, missing checkou
   const doc = parse(await renderDocument(template, getRoute(productPath), [], noAssets))
   expect(schema(doc)).not.toContainEqual(expect.objectContaining({ '@type': 'Product' }))
   expect(doc.querySelector('main .catalog-price')).toBeNull()
+})
+
+it('never promotes a high jewelry design study or its indicative price to a production Offer', async () => {
+  const route = getRoute('/products/the-lumiere-riviere/')
+  expect(route.kind).toBe('product')
+  const [item] = catalog.items
+  const unverified = verifiedOffers({
+    ...catalog,
+    items: [{ ...item, productSlug: route.slug ?? '', name: route.label, priceCents: 1_850_000 }],
+  })
+  expect(unverified).toEqual([])
+  const doc = parse(await renderDocument(template, route, [], noAssets, { offers: unverified }))
+  expect(schema(doc)).not.toContainEqual(expect.objectContaining({ '@type': 'Product' }))
+  expect(JSON.parse(doc.querySelector('#root')?.getAttribute('data-prerendered-offer') ?? 'null')).toBeNull()
+  expect(parse(renderMerchantFeed(unverified), 'application/xml').querySelectorAll('channel > item')).toHaveLength(0)
 })
 
 it('requires explicit publication and rejects a nonproduction API before reading its offers', async () => {

@@ -30,7 +30,7 @@
 .commerce-totals dd { margin: 0; text-align: end; white-space: nowrap; }
 .commerce-total { padding-block-start: .75rem; border-block-start: 1px solid var(--line); font-weight: 650; }
 .commerce-engraving { padding-inline: .25rem; border-inline-start: 2px solid var(--line); white-space: pre-wrap; overflow-wrap: anywhere; }
-.commerce-approval .catalog-opt-in { padding-block-start: 1rem; border-block-start: 1px solid var(--line); }
+.commerce-approval .concierge-consent { border-block-start: 1px solid var(--line); }
 .catalog-text-button { min-block-size: 2.75rem; padding: 0; border: 0; background: transparent; color: var(--blue-dark); text-decoration: underline; text-underline-offset: .22em; }
 .catalog-text-button:disabled { opacity: .65; }
 @media (max-width: 36rem) {

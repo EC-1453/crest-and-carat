@@ -42,13 +42,13 @@ npx wrangler deploy --dry-run --env production --config worker/wrangler.toml
    npx wrangler whoami
    ```
 
-2. If Milestone 1 already stored subscribers in D1, reuse that database to preserve them. Otherwise create a fresh production database.
+2. Confirm the Cloudflare account contains the production D1 database `crest-and-carat-db` with ID `c73b3d5d-0976-4640-9fcb-e514badfb246`. The Worker already binds it as `DB` in `worker/wrangler.toml`. Keep the separate test binding for local development.
+
+   For a fresh deployment in an account without this database, create it and set that account's database name and ID under `[[env.production.d1_databases]]`. Preserve an existing subscriber database if it already has production data.
 
    ```sh
-   npx wrangler d1 create crest-and-carat --no-update-config --config worker/wrangler.toml
+   npx wrangler d1 create crest-and-carat-db --no-update-config --config worker/wrangler.toml
    ```
-
-   Set the actual `database_name` and `database_id` under `[[env.production.d1_databases]]` in `worker/wrangler.toml`. Keep the binding name `DB` and `migrations_dir = "migrations"`. The repository UUID is a placeholder. Keep the top-level test database separate.
 
 3. If the production database already has data, check its migration history and save an export in a secure location outside the repository. The first Worker migration shares the Milestone 1 migration name. The next migration copies archived subscriber and consent data into `subscribers`. Check that an existing `subscriber_events` table has the expected migration history before applying changes.
 
@@ -108,18 +108,27 @@ Cloudflare Pages, Workers, D1, and Resend can run within their free-tier limits.
 
 ## 5. Confirm the catalog before live sales
 
-| Product | Repository and automated verification | Live production purchase verification | Evidence needed before activation |
-| --- | --- | --- | --- |
-| The Sovereign | Inquiry-only page | Unverified | Exact 14K nameplate SKU, lettering and character rules |
-| The Aurelia | Inquiry-only page | Unverified | Exact natural diamond, weight, grading details, and setting |
-| The Seraphina | Inquiry-only page | Unverified | Exact freshwater pearl and gold components, engraving rules, and one-package assembly and shipping |
-| The Monarch | Inquiry-only page | Unverified | Exact 14K signet, approved ring sizes, and monogram rules |
-| The Celeste | Inquiry-only page | Unverified | Exact moissanite and vermeil construction, length, and product specifications |
-| The Royal Coordinate | Inquiry-only page | Unverified | Exact 14K piece, engraving surface, and supplier-approved coordinate format |
+| Product | Slug | Storefront status | Live production purchase verification | Evidence needed before activation |
+| --- | --- | --- | --- | --- |
+| The Sovereign | `the-sovereign` | Inquiry only | Unverified | Exact 14K nameplate SKU, lettering and character rules |
+| The Aurelia | `the-aurelia` | Inquiry only | Unverified | Exact natural diamond, weight, grading details, and setting |
+| The Seraphina | `the-seraphina` | Inquiry only | Unverified | Exact freshwater pearl and gold components, engraving rules, and one-package assembly and shipping |
+| The Monarch | `the-monarch` | Inquiry only | Unverified | Exact 14K signet, approved ring sizes, and monogram rules |
+| The Celeste | `the-celeste` | Inquiry only | Unverified | Exact moissanite and vermeil construction, length, and product specifications |
+| The Royal Coordinate | `the-royal-coordinate` | Inquiry only | Unverified | Exact 14K piece, engraving surface, and supplier-approved coordinate format |
+| The Aurum Chain | `the-aurum-chain` | Design study | Unverified | Exact 18K solid gold link construction, weight, dimensions, and clasp |
+| The Empire Cuff | `the-empire-cuff` | Design study | Unverified | Exact 22K solid gold construction, weight, and wrist fit |
+| The Estelle Solitaire | `the-estelle-solitaire` | Design study | Unverified | Exact natural diamond, GIA grading report, and Platinum 950 setting |
+| The Lumière Rivière | `the-lumiere-riviere` | Design study | Unverified | Natural diamond schedule, principal stone's GIA report, and 18K white gold setting |
+| The Imperial Ruby | `the-imperial-ruby` | Design study | Unverified | Exact natural ruby, origin and treatment report, and applicable import eligibility |
+| The Verde Emerald | `the-verde-emerald` | Design study | Unverified | Exact natural emerald, provenance and treatment report, and 18K gold setting |
+| The Royal Sapphire | `the-royal-sapphire` | Design study | Unverified | Exact natural sapphire, lab report and treatment disclosure, and Platinum 950 setting |
+| The Solstice South Sea | `the-solstice-south-sea` | Design study | Unverified | Exact cultured South Sea pearl pair, treatment disclosures, and 18K gold mounts |
+| The Lune Akoya | `the-lune-akoya` | Design study | Unverified | Exact cultured Akoya strand, sourcing and treatment disclosures, and 18K white gold clasp |
 
-The commerce suite uses fixture SKUs, isolated D1, and simulated provider responses. Production SKU availability, settlement, supplier acceptance, and order delivery remain unverified for all six pieces. Keep the released catalog inquiry-only while approvals and evidence are outstanding.
+The six original pieces and nine high jewelry design studies accept inquiries through the Private Concierge Dossier. The design studies display indicative starting estimates for commissions. Live prices require confirmation for the exact piece. Checkout, Product/Offer markup, and merchant-feed entries require approved live offers. The commerce suite uses fixture SKUs, isolated D1, and simulated provider responses. Live SKU availability, settlement, supplier acceptance, and order delivery remain unverified for all 15 pieces.
 
-1. Obtain verified supplier cost, exact SKU and variants, approved images, availability, and engraving specifications for each piece. Add the approved storefront record to `src/catalog-source.ts`. Configure matching D1 SKUs, eligible destinations, insured rates, tax and import-charge disclosures, and the current terms version. Review delivery separately for the UAE, Saudi Arabia, Qatar, Kuwait, Bahrain, and Oman before enabling any of those destinations.
+1. Confirm the exact piece and variant in the dossier. Include metal and purity, the selected stone and any applicable origin, treatment and grading report, approved images, engraving specifications, availability, and delivery terms. Obtain the verified supplier cost and exact SKU before adding the approved storefront record to `src/catalog-source.ts`. Configure matching D1 SKUs, eligible destinations, insured rates, tax and import-charge disclosures, and the current terms version. Review delivery separately for the UAE, Saudi Arabia, Qatar, Kuwait, Bahrain, and Oman before enabling any of those destinations.
 2. Confirm an approved hosted payment method and transactional email. Keep `supplier_api_approved` off until the supplier approves automation for that SKU. Complete a separate, authorized provider and supplier acceptance check before making the piece publicly orderable.
 3. After deployment, confirm the storefront and `/api/health` return HTTP 200, an invented path returns 404, and `/api/catalog` contains only explicitly approved items and processors. Check that the sitemap, robots file, and merchant feed load. Confirm `noindex` on preview and private commerce pages. Submit a Private List signup using an address you control and confirm the matching `subscribers` row and consent timestamp in D1. The query is in the [concierge setup](CONCIERGE_SETUP.md).
 4. To publish verified offers, set `CARAT_PUBLISH_VERIFIED_OFFERS=1` for the production Pages build. Deploy the Worker first so the build can read `/api/health` and `/api/catalog` on the canonical host. An offer requires approved exact-item details, one matching purchasable D1 variant per canonical page, and `availability: 'InStock'` in its approved storefront record. Set that availability only when orders are open and the supplier has confirmed it can fulfill on time. Rebuild Pages after changing price, availability, or eligibility. In Merchant Center, configure delivery for each approved target country and check that the availability and USD price agree across the store, hosted checkout, and feed. [Google Merchant availability requirements](https://support.google.com/merchants/answer/6324448)

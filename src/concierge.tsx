@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { ComponentPropsWithoutRef, FormEvent, ReactNode } from 'react';
 import { SUPPORT_ALIAS, SUPPORT_EMAIL } from './business';
 import { collections, products } from './catalog';
 import { apiEndpoint, newRequestId } from './commerce/http';
@@ -27,6 +27,8 @@ type SubscriberResult =
 const fallbackMessage = 'Concierge forms are temporarily unavailable. You can continue by email below.';
 const privateListSessionKey = 'crest-and-carat.private-list.seen';
 const privateListEvent = 'crest-and-carat:private-list';
+const dossierRequest = 'Request: Private Concierge Dossier';
+const messageLimit = 2000;
 
 export async function submitSubscriber(input: SubscriberInput, signal?: AbortSignal): Promise<SubscriberResult> {
   const controller = new AbortController();
@@ -136,9 +138,23 @@ function subscriberContext() {
 
 function Honeypot() {
   return (
-    <div className="concierge-honeypot" aria-hidden="true">
-      <label>Website <input name="website" tabIndex={-1} autoComplete="off" /></label>
+    <div className="concierge-honeypot" hidden aria-hidden="true">
+      <label>Website <input type="text" name="website" tabIndex={-1} autoComplete="off" /></label>
     </div>
+  );
+}
+
+type ConsentCheckboxProps = Pick<ComponentPropsWithoutRef<'input'>,
+  'aria-describedby' | 'checked' | 'disabled' | 'name' | 'onChange' | 'required' | 'value'
+> & { children: ReactNode };
+
+export function ConsentCheckbox({ children, ...inputProps }: ConsentCheckboxProps) {
+  return (
+    <label className="concierge-consent">
+      <input type="checkbox" {...inputProps} />
+      <span className="concierge-consent__indicator" aria-hidden="true" />
+      <span>{children}</span>
+    </label>
   );
 }
 
@@ -189,10 +205,9 @@ export function PrivateList({ compact = false, placement = 'footer' }: { compact
             <input type="email" id={emailId} name="email" required maxLength={254} autoComplete="email" placeholder="Your email address" value={email} onChange={(event) => setEmail(event.target.value)} />
             <button className="button" type="submit" disabled={sending}>{sending ? 'Joining…' : 'Join the List'}</button>
           </div>
-          <label className="concierge-consent">
-            <input type="checkbox" name="marketingConsent" value="yes" required />
-            <span>I agree to receive marketing emails from CREST &amp; CARAT. I can unsubscribe at any time.</span>
-          </label>
+          <ConsentCheckbox name="marketingConsent" value="yes" required>
+            I agree to receive marketing emails from CREST &amp; CARAT. I can unsubscribe at any time.
+          </ConsentCheckbox>
           <a className="concierge-privacy" href="/privacy/">Privacy policy</a>
           <noscript><a href={fallbackLink}>Request access by email</a></noscript>
           <div aria-live="polite">
@@ -274,6 +289,7 @@ export function PrivateListDrawer() {
 
 export function ContactPage() {
   const [piece, setPiece] = useState('');
+  const [requestDossier, setRequestDossier] = useState(false);
   const [message, setMessage] = useState('');
   const [fallbackLink, setFallbackLink] = useState('');
   const { result, send, sending } = useSubscriberSubmission();
@@ -288,6 +304,7 @@ export function ContactPage() {
     const selectedPiece = query.get('piece');
     if (selectedPiece && products.some((product) => product.slug === selectedPiece)) {
       setPiece(selectedPiece);
+      setRequestDossier(query.get('request') === 'dossier');
       return;
     }
     const collection = collections.find(({ slug }) => slug === query.get('collection'));
@@ -300,7 +317,8 @@ export function ContactPage() {
     const form = new FormData(event.currentTarget);
     const email = formText(form, 'email');
     const name = formText(form, 'name');
-    const message = formText(form, 'message');
+    const note = formText(form, 'message');
+    const message = requestDossier ? `${dossierRequest}\n\n${note}`.trimEnd() : note;
     const marketingConsent = form.get('marketingConsent') === 'yes';
     const product = products.find((item) => item.slug === piece);
     const details = [
@@ -311,7 +329,10 @@ export function ContactPage() {
       '',
       message,
     ].join('\n');
-    setFallbackLink(mailLink(product ? `Inquiry about ${product.name}` : 'CREST & CARAT concierge inquiry', details));
+    const subject = product
+      ? requestDossier ? `Private Concierge Dossier for ${product.name}` : `Inquiry about ${product.name}`
+      : 'CREST & CARAT concierge inquiry';
+    setFallbackLink(mailLink(subject, details));
     const collection = collections.find(({ slug }) => slug === new URLSearchParams(window.location.search).get('collection'));
     await send({ ...subscriberContext(), source: 'inquiry', email, name, message, marketingConsent, website: formText(form, 'website'),
       interestCategory: product?.slug ?? collection?.slug, ...(piece ? { productSlug: piece } : {}) });
@@ -321,15 +342,17 @@ export function ContactPage() {
     <section className="contact-page" aria-labelledby="contact-title">
       <div className="contact-page__intro">
         <span className="concierge-kicker">Private Client Concierge</span>
-        <h1 id="contact-title" tabIndex={-1}>Contact CREST &amp; CARAT</h1>
-        <p>Tell us about the piece, occasion, or detail you have in mind. We can help with personalization, gifting, and insured delivery to the US, Gulf, and international destinations.</p>
+        <h1 id="contact-title" tabIndex={-1}>{requestDossier ? 'Request a Private Dossier' : 'Contact CREST & CARAT'}</h1>
+        <p>{requestDossier
+          ? 'Ask for the available specifications, provenance and personalization options for your selected piece. Your concierge can also confirm acquisition terms and insured delivery for your destination.'
+          : 'Tell us about the piece, occasion, or detail you have in mind. We can help with personalization, gifting, and insured delivery to the US, Gulf, and international destinations.'}</p>
         <a className="contact-page__email" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
         {SUPPORT_ALIAS && SUPPORT_ALIAS !== SUPPORT_EMAIL && <a className="contact-page__email" href={`mailto:${SUPPORT_ALIAS}`}>{SUPPORT_ALIAS}</a>}
         <a className="concierge-privacy" href="/track-order/">Need an update on an existing order?</a>
       </div>
       {result?.status === 'saved' ? (
         <div className="contact-page__form contact-page__response">
-          <h2 tabIndex={-1} ref={success}>Thank you for your inquiry.</h2>
+          <h2 tabIndex={-1} ref={success}>{requestDossier ? 'Thank you for requesting a dossier.' : 'Thank you for your inquiry.'}</h2>
           {result.forwarding === 'delivered' ? <p>Your inquiry has been sent. We’ll reply to the email address you provided.</p> : (
             <p>Your inquiry was saved. <a href={fallbackLink}>Open a copy in your email app</a> to send it directly to the concierge.</p>
           )}
@@ -339,19 +362,23 @@ export function ContactPage() {
           <Honeypot />
           <label>Your name <span>(optional)</span><input name="name" autoComplete="name" maxLength={100} /></label>
           <label>Email address<input type="email" name="email" autoComplete="email" required maxLength={254} /></label>
-          <label>Piece of interest <span>(optional)</span>
-            <select name="piece" value={piece} onChange={(event) => setPiece(event.target.value)}>
-              <option value="">General inquiry</option>
+          <label>Piece of interest {!requestDossier && <span>(optional)</span>}
+            <select name="piece" required={requestDossier} value={piece} onChange={(event) => setPiece(event.target.value)}>
+              {!requestDossier && <option value="">General inquiry</option>}
               {products.map((product) => <option value={product.slug} key={product.slug}>{product.name}</option>)}
             </select>
           </label>
-          <label>How can we help?<textarea name="message" rows={5} required maxLength={2000} value={message} onChange={(event) => setMessage(event.target.value)} /></label>
-          <label className="concierge-consent">
-            <input type="checkbox" name="marketingConsent" value="yes" />
-            <span>Send me occasional notes from the Private List. I can unsubscribe at any time.</span>
+          <label>
+            {requestDossier ? <>What would you like to know? <span>(optional)</span></> : 'How can we help?'}
+            <textarea name="message" rows={5} required={!requestDossier}
+              maxLength={requestDossier ? messageLimit - dossierRequest.length - 2 : messageLimit}
+              value={message} onChange={(event) => setMessage(event.target.value)} />
           </label>
+          <ConsentCheckbox name="marketingConsent" value="yes">
+            Send me occasional notes from the Private List. I can unsubscribe at any time.
+          </ConsentCheckbox>
           <div className="contact-page__form-actions">
-            <button className="button" type="submit" disabled={sending}>{sending ? 'Sending…' : 'Send Inquiry'}</button>
+            <button className="button" type="submit" disabled={sending}>{sending ? 'Sending…' : requestDossier ? 'Request Dossier' : 'Send Inquiry'}</button>
             <a className="concierge-privacy" href="/privacy/">Privacy policy</a>
           </div>
           <div aria-live="polite">

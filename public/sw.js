@@ -1,5 +1,5 @@
 const cachePrefix = 'crest-carat-static-';
-const cacheName = `${cachePrefix}3`;
+const cacheName = `${cachePrefix}4`;
 const assetCacheName = `${cacheName}-assets`;
 const assetLimit = 96;
 // Pages serves offline.html at this clean URL without a redirect.

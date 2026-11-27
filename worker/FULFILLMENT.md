@@ -50,7 +50,7 @@ The Worker creates one fulfillment job per approved supplier and a manual job fo
 
 ## 3. Work the manual fulfillment queue
 
-1. Open **Cloudflare → D1 → crest-and-carat → Console**. Run this query to list jobs and their purchase-order references.
+1. Open **Cloudflare → D1 → crest-and-carat-db → Console**. Run this query to list jobs and their purchase-order references.
 
    ```sql
    SELECT o.order_reference, j.merchant_reference, j.last_error, j.created_at

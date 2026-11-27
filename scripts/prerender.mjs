@@ -27,6 +27,7 @@ const allRoutes = [...routes, notFoundRoute]
 const paths = new Set()
 const routeModules = {
   shop: 'src/catalog-pages.tsx',
+  'high-jewelry': 'src/catalog-pages.tsx',
   collection: 'src/catalog-pages.tsx',
   product: 'src/catalog-pages.tsx',
   bag: 'src/commerce/bag-page.tsx',

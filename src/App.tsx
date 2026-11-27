@@ -1,5 +1,5 @@
 import { Component, useEffect, useRef, useState, type ReactNode } from 'react'
-import { ChevronRight, Gem, Menu, MessageCircle, ShieldCheck, ShoppingBag, X } from 'lucide-react'
+import { ArrowRight, ChevronRight, Gem, Menu, MessageCircle, ShieldCheck, ShoppingBag, X } from 'lucide-react'
 import { AppDownload, PwaRegistration } from './app-install'
 import { collections } from './catalog'
 import type { PrerenderedOffer } from './catalog-types'
@@ -9,21 +9,24 @@ import { useBag } from './commerce/bag'
 import { homeHero } from './home-media'
 import { getRoute, type Route } from './routes'
 
-const announcement = 'Bespoke Jewelry · Engraving & Gifting · US & Global Gulf Delivery'
+const announcement = 'Private commissions · Insured delivery inquiries for the US and Gulf'
 const mainLinks = [
-  { path: '/shop/', label: 'Shop All' },
+  { path: '/shop/', label: 'Collections' },
+  { path: '/high-jewelry/', label: 'High Jewelry' },
+  { path: '/guides/engraved-fine-jewelry/', label: 'Bespoke & Engraving' },
   { path: '/our-craft/', label: 'Our Craft' },
   { path: '/guides/', label: 'Journal' },
-  { path: '/contact/', label: 'Contact' },
+  { path: '/contact/', label: 'Private Concierge' },
 ]
 const customerLinks = [
-  { path: '/contact/', label: 'Contact' },
+  { path: '/contact/', label: 'Private Concierge' },
   { path: '/track-order/', label: 'Track Order' },
   { path: '/shipping-delivery/', label: 'Shipping & Delivery' },
   { path: '/custom-orders-final-sale/', label: 'Custom Orders & Final Sale' },
 ]
 const houseLinks = [
-  { path: '/shop/', label: 'Shop All' },
+  { path: '/shop/', label: 'Collections' },
+  { path: '/high-jewelry/', label: 'High Jewelry' },
   { path: '/about/', label: 'About' },
   { path: '/our-craft/', label: 'Our Craft' },
   { path: '/guides/', label: 'Journal' },
@@ -38,10 +41,10 @@ function Wordmark({ footer = false }: { footer?: boolean }) {
   )
 }
 
-function BagLink({ mobile = false, active }: { mobile?: boolean; active: boolean }) {
+function BagLink({ active }: { active: boolean }) {
   const count = useBag().reduce((total, line) => total + line.quantity, 0)
   return (
-    <a className={`bag-link${mobile ? ' bag-link--mobile' : ''}`} href="/bag/" aria-current={active ? 'page' : undefined}
+    <a className="bag-link" href="/bag/" aria-current={active ? 'page' : undefined}
       aria-label={`Shopping bag${count ? `, ${count} ${count === 1 ? 'piece' : 'pieces'}` : ''}`}>
       <ShoppingBag aria-hidden="true" size={21} strokeWidth={1.5} />
       {count > 0 && <span className="bag-count" aria-hidden="true">{count}</span>}
@@ -52,7 +55,7 @@ function BagLink({ mobile = false, active }: { mobile?: boolean; active: boolean
 function Header({ path }: { path: string }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const toggle = useRef<HTMLButtonElement>(null)
-  const masthead = useRef<HTMLDivElement>(null)
+  const header = useRef<HTMLElement>(null)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -64,56 +67,48 @@ function Header({ path }: { path: string }) {
     }
 
     function handleOutside(event: PointerEvent) {
-      if (event.target instanceof Node && !masthead.current?.contains(event.target)) {
+      if (event.target instanceof Node && !header.current?.contains(event.target)) {
         setMenuOpen(false)
       }
     }
 
+    const desktop = window.matchMedia('(min-width: 48rem)')
+    const closeAtDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) setMenuOpen(false)
+    }
     document.addEventListener('keydown', handleEscape)
     document.addEventListener('pointerdown', handleOutside)
+    desktop.addEventListener('change', closeAtDesktop)
     return () => {
       document.removeEventListener('keydown', handleEscape)
       document.removeEventListener('pointerdown', handleOutside)
+      desktop.removeEventListener('change', closeAtDesktop)
     }
   }, [menuOpen])
 
-  function navLink(link: (typeof mainLinks)[number]) {
-    return (
-      <a key={link.path} href={link.path} aria-current={path === link.path ? 'page' : undefined}>
-        {link.label}
-      </a>
-    )
-  }
-
   return (
-    <header className="site-header">
+    <header className="site-header" ref={header}>
       <div className="announcement">{announcement}</div>
-      <div className="masthead container" ref={masthead}>
-        <nav className="desktop-nav desktop-nav--start" aria-label="Collections and craft">
-          {mainLinks.slice(0, 2).map(navLink)}
-        </nav>
+      <div className="masthead container">
         <button
           className="menu-toggle"
           type="button"
           ref={toggle}
-          aria-controls="mobile-navigation"
+          aria-controls="primary-navigation"
           aria-expanded={menuOpen}
           aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-          onClick={() => setMenuOpen(!menuOpen)}
+          onClick={() => setMenuOpen((open) => !open)}
         >
           {menuOpen ? <X aria-hidden="true" size={23} /> : <Menu aria-hidden="true" size={23} />}
         </button>
         <Wordmark />
-        <BagLink mobile active={path === '/bag/'} />
-        <nav className="desktop-nav desktop-nav--end" aria-label="Journal and concierge">
-          {mainLinks.slice(2).map(navLink)}
-          <BagLink active={path === '/bag/'} />
-        </nav>
-        <nav className="mobile-nav" id="mobile-navigation" aria-label="Main navigation" hidden={!menuOpen}>
-          {mainLinks.map(navLink)}
-          <a href="/app/">The Private App</a>
-        </nav>
+        <BagLink active={path === '/bag/'} />
       </div>
+      <nav className="site-nav" id="primary-navigation" aria-label="Main navigation" data-open={menuOpen}>
+        {mainLinks.map(({ path: linkPath, label }) => (
+          <a key={linkPath} href={linkPath} aria-current={path === linkPath ? 'page' : undefined}>{label}</a>
+        ))}
+      </nav>
     </header>
   )
 }
@@ -121,17 +116,16 @@ function Header({ path }: { path: string }) {
 function HomePage() {
   return (
     <>
-      <section className="hero" aria-labelledby="home-heading">
+      <section className="hero container" aria-labelledby="home-heading">
         <div className="hero-editorial">
           <div className="hero-copy">
-            <h1 id="home-heading">
-              <span>Made to Be Yours.</span>
-              <span>Crafted for the Rare, Beyond Compare.</span>
-              <span>A Name to Wear, A Story to Share.</span>
-            </h1>
-            <p className="eyebrow hero-label">PERSONALIZED FINE JEWELRY</p>
-            <p className="hero-materials">Solid Gold · Sterling Silver · Platinum · Genuine Pearls · Diamonds</p>
-            <a className="button hero-button" href="/shop/">Explore the Collection</a>
+            <p className="eyebrow hero-label">An Evercrest VIP House</p>
+            <h1 id="home-heading">High jewelry, <em>made personal.</em></h1>
+            <p className="hero-materials">Explore 18K and 22K gold, natural gemstones, and fine jewelry designed for the occasions you’ll remember.</p>
+            <div className="hero-actions">
+              <a className="button hero-button" href="/high-jewelry/">Explore High Jewelry <ArrowRight aria-hidden="true" size={17} /></a>
+              <a className="hero-text-link" href="/guides/engraved-fine-jewelry/">Bespoke &amp; Engraving</a>
+            </div>
           </div>
         </div>
         <figure className="hero-showcase">
@@ -147,22 +141,21 @@ function HomePage() {
               fetchPriority="high"
             />
           </picture>
-          <figcaption>Concept styling</figcaption>
+          <figcaption>High jewelry design study</figcaption>
         </figure>
       </section>
 
       <div className="house-services" aria-label="Concierge services">
-        <span><Gem aria-hidden="true" /> Bespoke Personalization</span>
-        <a href="/shipping-delivery/"><ShieldCheck aria-hidden="true" /> Insured US &amp; Gulf Delivery</a>
-        <a href="/contact/"><MessageCircle aria-hidden="true" /> Private Client Concierge</a>
+        <a href="/guides/engraved-fine-jewelry/"><Gem aria-hidden="true" /> Bespoke Engraving &amp; Sizing</a>
+        <a href="/shipping-delivery/"><ShieldCheck aria-hidden="true" /> Insured US &amp; Gulf Delivery Inquiries</a>
+        <a href="/contact/"><MessageCircle aria-hidden="true" /> Private Concierge</a>
       </div>
 
       <section className="container home-collections" aria-labelledby="collection-heading">
-        <p className="eyebrow">The Collections</p>
-        <h2 id="collection-heading">An Heirloom in the Making</h2>
-        <p>Explore the materials, details, and personal touches that make a piece yours.</p>
+        <h2 id="collection-heading">The High Jewelry Collections</h2>
+        <p>Precious gold, natural diamonds, colored gemstones, and pearls. Explore the design studies and request a private dossier for your piece.</p>
         <div className="home-collection-grid">
-          {collections.filter((collection) => collection.featured).map((collection) => (
+          {collections.filter((collection) => collection.tier === 'high-jewelry').map((collection) => (
             <CollectionCard key={collection.slug} collection={collection} />
           ))}
         </div>
@@ -178,10 +171,10 @@ function HomePage() {
           <figcaption>Concept styling</figcaption>
         </figure>
         <div className="craft-feature__copy">
-          <p className="eyebrow">Your Story, in Fine Detail</p>
-          <h2 id="craft-heading">Begin With Something Meaningful</h2>
-          <p>A name, a date, or the coordinates of a place you carry with you. Our private client concierge can help you explore materials, engraving, and a piece made for the occasion.</p>
-          <a className="button button--secondary" href="/our-craft/">Discover Our Craft</a>
+          <p className="eyebrow">Bespoke &amp; Engraving</p>
+          <h2 id="craft-heading">Make the piece yours.</h2>
+          <p>A name, a date, or the coordinates of a place you carry with you. Work with the Private Concierge to choose the materials, fit, and inscription for your piece.</p>
+          <a className="button button--secondary" href="/guides/engraved-fine-jewelry/">Explore Bespoke &amp; Engraving</a>
         </div>
       </section>
     </>
@@ -214,7 +207,7 @@ function SiteFooter() {
       <div className="container footer-links">
         <div className="footer-house">
           <Wordmark footer />
-          <p>Personalized fine jewelry and jeweled objects for the occasions you’ll remember.</p>
+          <p>High jewelry and personalized fine jewelry by CREST &amp; CARAT, an Evercrest VIP House.</p>
         </div>
         <nav aria-label="Client services">
           <h2>Client Services</h2>
@@ -264,6 +257,10 @@ export async function resolveRouteContent(route: Route, prerenderedOffer?: Prere
     case 'shop': {
       const { ShopPage } = await import('./catalog-pages')
       return <ShopPage />
+    }
+    case 'high-jewelry': {
+      const { HighJewelryPage } = await import('./catalog-pages')
+      return <HighJewelryPage />
     }
     case 'collection': {
       const { CollectionPage } = await import('./catalog-pages')

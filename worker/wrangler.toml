@@ -33,8 +33,8 @@ NICKEL_ENABLED = "false"
 
 [[env.production.d1_databases]]
 binding = "DB"
-database_name = "crest-and-carat"
-database_id = "00000000-0000-0000-0000-000000000001"
+database_name = "crest-and-carat-db"
+database_id = "c73b3d5d-0976-4640-9fcb-e514badfb246"
 migrations_dir = "migrations"
 
 [env.production.triggers]

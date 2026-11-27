@@ -1,11 +1,11 @@
-const sizeList = [480, 720, 1440]
+const stem = '/images/haute-jewelry-hero'
 
 export const homeHero = {
-  src: '/images/hero-1440.webp',
-  alt: 'Concept styling of gold jewelry, pearls and an engraved pendant on sunlit limestone',
-  width: 1440,
-  height: 1080,
-  sizes: '(min-width: 96rem) 52rem, (min-width: 48rem) 52vw, 100vw',
-  webp: sizeList.map((width) => `/images/hero-${width}.webp ${width}w`).join(', '),
-  avif: sizeList.map((width) => `/images/hero-${width}.avif ${width}w`).join(', '),
+  src: `${stem}.webp`,
+  alt: 'A sculptural brushed gold cuff, a gold chain, and a blue gemstone ring on warm limestone',
+  width: 960,
+  height: 1200,
+  sizes: '(min-width: 96rem) 48rem, (min-width: 48rem) 50vw, 92vw',
+  webp: `${stem}-480.webp 480w, ${stem}-720.webp 720w, ${stem}.webp 960w`,
+  avif: `${stem}-480.avif 480w, ${stem}-720.avif 720w, ${stem}.avif 960w`,
 }

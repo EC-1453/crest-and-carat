@@ -1,38 +1,77 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { FINAL_SALE_NOTICE } from '../business';
 import type { PrerenderedOffer, Product } from '../catalog-types';
 import { engravingIssue, formatUsd, purchasableItems, type CatalogItem } from './api';
 import { addToBag } from './bag';
 import { useCatalog } from './use-catalog';
 
-function Inquiry({ slug }: { slug: string }) {
+export function dossierPath(slug: string): string {
+  return `/contact/?piece=${encodeURIComponent(slug)}&request=dossier`;
+}
+
+export function CommissionEstimate({ priceCents }: { priceCents?: number }) {
+  if (priceCents === undefined) return null;
+  return (
+    <p className="catalog-price-estimate">
+      <span>Indicative commission from</span>
+      <strong>{formatUsd(priceCents)} USD</strong>
+    </p>
+  );
+}
+
+function DossierLink({ slug, secondary = false }: { slug: string; secondary?: boolean }) {
+  return (
+    <a className={secondary ? 'button button--secondary' : 'button'} href={dossierPath(slug)}>
+      Request Private Concierge Dossier
+    </a>
+  );
+}
+
+function Inquiry({ product }: { product: Product }) {
   return (
     <div className="catalog-inquiry">
-      <p>Share your preferences and delivery destination to discuss what can be made for you.</p>
-      <a className="button" href={`/contact/?piece=${encodeURIComponent(slug)}`}>Inquire about this piece</a>
+      {!product.verifiedDetails && <CommissionEstimate priceCents={product.commission?.startingPriceCents} />}
+      <p className="catalog-inquiry__copy">Confirm details, customization, pricing and delivery with your private concierge.</p>
+      <DossierLink slug={product.slug} />
     </div>
   );
 }
 
-function AddToBag({ items }: { items: CatalogItem[] }) {
+function AcquireForm({ items, slug }: { items: CatalogItem[]; slug: string }) {
   const [sku, setSku] = useState(items.length === 1 ? items[0].sku : '');
   const [engraving, setEngraving] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [issue, setIssue] = useState('');
-  const [added, setAdded] = useState(false);
+  const [acquiring, setAcquiring] = useState(false);
+  const navigating = useRef(false);
   const item = items.find((option) => option.sku === sku);
+
+  useEffect(() => {
+    function restoreForm(event: PageTransitionEvent) {
+      if (!event.persisted) return;
+      navigating.current = false;
+      setAcquiring(false);
+    }
+    window.addEventListener('pageshow', restoreForm);
+    return () => window.removeEventListener('pageshow', restoreForm);
+  }, []);
 
   function resetFeedback() {
     setIssue('');
-    setAdded(false);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!item) return;
-    const error = engravingIssue(engraving, item.engraving) ?? addToBag({ sku, quantity, engraving }, item.maxQuantity);
-    setIssue(error ?? '');
-    setAdded(!error);
+    if (!item || navigating.current) return;
+    const error = engravingIssue(engraving, item.engraving) ?? addToBag({ sku, quantity, engraving }, item.maxQuantity, { requirePersistence: true });
+    if (error) {
+      setIssue(error);
+      return;
+    }
+    setIssue('');
+    navigating.current = true;
+    setAcquiring(true);
+    window.location.assign('/bag/');
   }
 
   return (
@@ -85,17 +124,18 @@ function AddToBag({ items }: { items: CatalogItem[] }) {
       )}
       {issue && <p className="catalog-field-error" role="alert">{issue}</p>}
       <div className="button-row">
-        <button className="button" type="submit" disabled={!item}>Add to Bag</button>
-        {added && <a className="button button--secondary" href="/bag/">View Bag</a>}
+        <button className="button" type="submit" disabled={!item || acquiring}>Acquire Piece</button>
+        <DossierLink slug={slug} secondary />
       </div>
-      <p className="catalog-help" role="status">{added ? 'Added to your bag.' : ''}</p>
+      {acquiring && <p className="catalog-help" role="status">Opening checkout…</p>}
     </form>
   );
 }
 
 export function ProductPurchase({ product, prerenderedOffer }: { product: Product; prerenderedOffer?: PrerenderedOffer }) {
-  const { state, reload } = useCatalog(product.image.approved);
-  if (!product.image.approved) return <Inquiry slug={product.slug} />;
+  const hasApprovedDetails = product.image.approved && Boolean(product.verifiedDetails);
+  const { state, reload } = useCatalog(hasApprovedDetails);
+  if (!hasApprovedDetails) return <Inquiry product={product} />;
 
   if (state.status === 'loading') return (
     <div className="catalog-inquiry">
@@ -104,17 +144,17 @@ export function ProductPurchase({ product, prerenderedOffer }: { product: Produc
         <p className="catalog-price">{formatUsd(prerenderedOffer.priceCents)} <span>USD</span></p>
       </>}
       <p className="catalog-help" role="status">Checking purchase options…</p>
-      <Inquiry slug={product.slug} />
+      <DossierLink slug={product.slug} />
     </div>
   );
   if (state.status === 'failed') return (
     <div className="catalog-inquiry">
       <p className="catalog-help" role="status">Purchase options are temporarily unavailable.</p>
       <button className="catalog-text-button" type="button" onClick={reload}>Check again</button>
-      <Inquiry slug={product.slug} />
+      <DossierLink slug={product.slug} />
     </div>
   );
 
   const items = purchasableItems(state.catalog, product.slug);
-  return items.length ? <AddToBag items={items} /> : <Inquiry slug={product.slug} />;
+  return items.length ? <AcquireForm items={items} slug={product.slug} /> : <Inquiry product={product} />;
 }

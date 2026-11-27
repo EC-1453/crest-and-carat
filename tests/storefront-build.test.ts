@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import { JSDOM } from 'jsdom'
-import { afterAll, expect, it, vi } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
+import { collectionPath, collections, productPath, products } from '../src/catalog'
 import { notFoundRoute, routes } from '../src/routes'
 
 const origin = 'https://carat.evercrest.vip'
@@ -35,8 +36,8 @@ function fromRoute(path: string) {
   return parse(readDist(path === '/404.html' ? '404.html' : `${path.slice(1)}index.html`))
 }
 
-afterAll(() => {
-  for (const dom of documents) dom.window.close()
+afterEach(() => {
+  for (const dom of documents.splice(0)) dom.window.close()
 })
 
 it.each([...routes, notFoundRoute])('serves a complete static HTML document for $path', (route) => {
@@ -85,6 +86,7 @@ it.each([...routes, notFoundRoute])('serves a complete static HTML document for 
   expect(types).toEqual(expect.arrayContaining(['Organization', 'WebSite']))
   expect(types.includes('BreadcrumbList')).toBe(route.breadcrumbs.length > 1)
   expect(types.includes('FAQPage')).toBe(route.path === '/shipping-delivery/')
+  expect(types.includes('ItemList')).toBe(route.kind === 'high-jewelry')
   expect(types).not.toContain('Product')
   expect(types).not.toContain('Offer')
 })
@@ -96,6 +98,26 @@ it('uses unique page titles and descriptions, including the static 404', () => {
     .toBe(pages.length)
 })
 
+it('renders the six primary navigation links once with one disclosure control', () => {
+  const doc = fromRoute('/high-jewelry/')
+  const header = doc.querySelector('header.site-header')
+  expect(header?.querySelectorAll('nav')).toHaveLength(1)
+  const nav = header?.querySelector('nav[aria-label="Main navigation"]')
+  const links = nav ? [...nav.querySelectorAll('a')] : []
+  expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
+    ['Collections', '/shop/'],
+    ['High Jewelry', '/high-jewelry/'],
+    ['Bespoke & Engraving', '/guides/engraved-fine-jewelry/'],
+    ['Our Craft', '/our-craft/'],
+    ['Journal', '/guides/'],
+    ['Private Concierge', '/contact/'],
+  ])
+  expect(nav?.querySelector('[aria-current="page"]')?.getAttribute('href')).toBe('/high-jewelry/')
+  const button = header?.querySelector('button[aria-controls]')
+  expect(button?.getAttribute('aria-controls')).toBe(nav?.id)
+  expect(button?.getAttribute('aria-expanded')).toBe('false')
+})
+
 it('lists only indexable canonical routes in the valid sitemap XML', () => {
   const sitemap = parse(readDist('sitemap.xml'), 'application/xml')
   expect(sitemap.documentElement.namespaceURI).toBe('http://www.sitemaps.org/schemas/sitemap/0.9')
@@ -105,8 +127,66 @@ it('lists only indexable canonical routes in the valid sitemap XML', () => {
   expect(readDist('robots.txt')).toContain('Disallow: /api/')
 })
 
-it('excludes inquiry-only pieces from the Merchant Center feed', () => {
-  expect(routes.filter(({ kind }) => kind === 'product')).toHaveLength(6)
+it('publishes the expanded High Jewelry catalog with working collection links and crawlable item list', () => {
+  const landing = fromRoute('/high-jewelry/')
+  const highJewelryProducts = products.filter(({ tier }) => tier === 'high-jewelry')
+  const highJewelryCollections = collections.filter(({ tier }) => tier === 'high-jewelry')
+  expect(highJewelryProducts).toHaveLength(9)
+  expect(highJewelryCollections).toHaveLength(4)
+  expect(landing.querySelector('main h1')?.textContent).toMatch(/high jewelry/i)
+  for (const collection of highJewelryCollections) {
+    const path = collectionPath(collection.slug)
+    expect(landing.querySelector(`main a[href="${path}"]`)).not.toBeNull()
+    expect(fromRoute(path).querySelector('main a[href="/high-jewelry/"]')).not.toBeNull()
+  }
+  for (const product of highJewelryProducts) {
+    expect(landing.querySelector(`main a[href="${productPath(product.slug)}"]`)).not.toBeNull()
+  }
+
+  const structuredData: { '@graph': Record<string, unknown>[] } = JSON.parse(
+    landing.querySelector('script[type="application/ld+json"]')?.textContent ?? '',
+  )
+  expect(structuredData['@graph']).toContainEqual(expect.objectContaining({
+    '@type': 'CollectionPage',
+    mainEntity: { '@id': domain('/high-jewelry/#pieces') },
+  }))
+  expect(structuredData['@graph']).toContainEqual(expect.objectContaining({
+    '@type': 'ItemList',
+    itemListElement: highJewelryProducts.map(({ slug, name }, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name,
+      url: domain(productPath(slug)),
+    })),
+  }))
+})
+
+it('retains all six personalized pieces and keeps concierge dossiers available on every product page', () => {
+  expect(routes.filter(({ kind }) => kind === 'product')).toHaveLength(15)
+  const originalProductSlugs = ['the-sovereign', 'the-aurelia', 'the-seraphina', 'the-monarch', 'the-celeste', 'the-royal-coordinate']
+  expect(products.map(({ slug }) => slug)).toEqual(expect.arrayContaining(originalProductSlugs))
+  const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+  for (const product of products) {
+    const doc = fromRoute(productPath(product.slug))
+    const dossier = [...doc.querySelectorAll('main a')].find((link) => link.textContent?.trim() === 'Request Private Concierge Dossier')
+    expect(dossier?.getAttribute('href')).toBe(`/contact/?piece=${product.slug}&request=dossier`)
+    const acquisition = [...doc.querySelectorAll('main a, main button')].find((element) => element.textContent?.trim() === 'Acquire Piece')
+    expect(acquisition).toBeUndefined()
+    expect(doc.querySelector('main .catalog-specifications')?.textContent).toContain(product.materials)
+    expect(doc.querySelector('main [aria-labelledby="piece-delivery"]')?.textContent).toMatch(/confirm.+US|US.+confirm/i)
+    if (product.tier === 'high-jewelry') {
+      const startingPrice = product.commission?.startingPriceCents
+      expect(startingPrice).toBeTypeOf('number')
+      const estimate = doc.querySelector('main .catalog-price-estimate')?.textContent
+      expect(estimate).toContain(usd.format((startingPrice ?? 0) / 100))
+      expect(doc.querySelector('main')?.textContent).toMatch(/indicative commission/i)
+      expect(doc.querySelector('main .catalog-specifications')?.textContent).toMatch(/Proposed metal.*Engraving.*Sizing/i)
+      expect(doc.querySelector('meta[property="og:image:alt"]')?.getAttribute('content')).toMatch(/design study/i)
+    }
+  }
+})
+
+it('excludes inquiry-only pieces and commission estimates from the Merchant Center feed', () => {
   const feed = parse(readDist('merchant-feed.xml'), 'application/xml')
   expect(feed.documentElement.tagName).toBe('rss')
   expect(feed.documentElement.getAttribute('version')).toBe('2.0')
@@ -228,11 +308,12 @@ it('uses WCAG AAA cocoa-on-beige contrast and protects small-screen and reduced-
   const paper = /--paper:\s*(#[\da-f]{6})/iu.exec(styles)?.[1]
   expect(ink).toBe('#392d27')
   expect(paper).toBe('#f1e7d8')
+  expect(styles).toMatch(/--gold:\s*#c6a467/u)
   expect((luminance(paper ?? '') + 0.05) / (luminance(ink ?? '') + 0.05)).toBeGreaterThanOrEqual(7)
   expect(styles).toMatch(/\.hero\s*\{[^}]*background:\s*var\(--paper\)/u)
   const mobile = styles.split('@media (max-width: 47.99rem)')[1]?.split('@media')[0]
-  expect(mobile).toMatch(/\.desktop-nav\s*\{\s*display:\s*none/u)
-  expect(mobile).toMatch(/\.menu-toggle, \.bag-link--mobile\s*\{[^}]*width:\s*2\.75rem;[^}]*height:\s*2\.75rem/u)
+  expect(mobile).toMatch(/\.site-nav:not\(\[data-open=["']true["']\]\)\s*\{\s*display:\s*none/u)
+  expect(mobile).toMatch(/\.menu-toggle\s*\{[^}]*width:\s*2\.75rem;[^}]*height:\s*2\.75rem/u)
   expect(mobile).toMatch(/\.hero\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\)/u)
   expect(stylesheet('catalog.css')).toMatch(/@media \(max-width: 720px\)[\s\S]*\.catalog-product\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\)/u)
   expect(stylesheet('commerce/commerce.css')).toMatch(/@media \(max-width: 36rem\)[\s\S]*\.commerce-fields\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\)/u)

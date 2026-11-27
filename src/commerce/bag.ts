@@ -56,22 +56,26 @@ function subscribe(listener: () => void) {
   };
 }
 
-function storeBag(items: readonly BagLine[]) {
-  currentBag = items;
+function storeBag(items: readonly BagLine[], requirePersistence = false): boolean {
   const encoded = JSON.stringify(items);
   try {
     window.localStorage.setItem(storageKey, encoded);
     currentValue = encoded;
+    memoryOnly = false;
     try { window.sessionStorage.removeItem(storageKey); } catch { /* Local storage holds the current bag. */ }
   } catch {
     try {
       window.sessionStorage.setItem(storageKey, encoded);
       currentValue = encoded;
+      memoryOnly = false;
     } catch {
+      if (requirePersistence) return false;
       memoryOnly = true;
     }
   }
+  currentBag = items;
   listeners.forEach((listener) => listener());
+  return true;
 }
 
 function equalLine(a: BagLine, b: BagLine): boolean {
@@ -82,17 +86,15 @@ export function useBag(): readonly BagLine[] {
   return useSyncExternalStore(subscribe, getBag, () => emptyBag);
 }
 
-export function addToBag(line: BagLine, maxQuantity: number): string | undefined {
+export function addToBag(line: BagLine, maxQuantity: number, { requirePersistence = false } = {}): string | undefined {
   const bag = getBag();
   const match = bag.findIndex((item) => equalLine(item, line));
   const skuQuantity = bag.reduce((total, item) => total + (item.sku === line.sku ? item.quantity : 0), 0);
   if (skuQuantity + line.quantity > maxQuantity) return `You can order up to ${maxQuantity} of this option at once.`;
-  if (match === -1) {
-    if (bag.length >= MAX_BAG_LINES) return 'Your bag has reached its limit. Review your pieces before adding more.';
-    storeBag([...bag, line]);
-  } else {
-    storeBag(bag.map((item, index) => index === match ? { ...item, quantity: item.quantity + line.quantity } : item));
-  }
+  if (match === -1 && bag.length >= MAX_BAG_LINES) return 'Your bag has reached its limit. Review your pieces before adding more.';
+  const nextBag = match === -1 ? [...bag, line]
+    : bag.map((item, index) => index === match ? { ...item, quantity: item.quantity + line.quantity } : item);
+  if (!storeBag(nextBag, requirePersistence)) return 'Allow browser storage to continue to checkout, or request a private concierge dossier.';
 }
 
 export function updateBag(line: BagLine, quantity: number, maxQuantity: number): string | undefined {

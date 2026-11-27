@@ -2,7 +2,7 @@ import { collectionPath } from './catalog';
 import type { CatalogImage, Collection } from './catalog-types';
 import './catalog.css';
 
-const cardSizes = '(max-width: 540px) 45vw, (max-width: 900px) 48vw, 360px';
+const cardSizes = '(max-width: 540px) 92vw, (max-width: 940px) 46vw, (max-width: 96rem) 30vw, 440px';
 
 export function CatalogPhoto({ image, sizes = cardSizes, eager = false }: { image: CatalogImage; sizes?: string; eager?: boolean }) {
   return (

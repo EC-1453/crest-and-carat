@@ -1,7 +1,7 @@
 .concierge-kicker {
   display: block;
   margin-bottom: 8px;
-  color: var(--ink);
+  color: var(--gold-text, #76562f);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.15em;
@@ -9,8 +9,7 @@
   text-transform: uppercase;
 }
 
-.concierge-visually-hidden,
-.concierge-honeypot {
+.concierge-visually-hidden {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -22,13 +21,15 @@
   border: 0;
 }
 
+.concierge-honeypot { display: none; }
+
 .private-list {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
   gap: clamp(24px, 5vw, 72px);
   width: 100%;
-  padding: 40px 0;
+  padding: clamp(40px, 6vw, 80px) 0;
 }
 
 .private-list__intro h2,
@@ -53,10 +54,11 @@
 .contact-page__form select,
 .contact-page__form textarea {
   width: 100%;
+  min-height: 48px;
   padding: 12px 16px;
-  border: 1px solid #9a8674;
+  border: 1px solid #8e7861;
   border-radius: 0;
-  background: var(--paper);
+  background: #fffbf5;
   color: var(--ink);
   font: 1rem/1.4 var(--body);
 }
@@ -64,22 +66,68 @@
 .private-list input::placeholder { color: #685c53; opacity: 1; }
 
 .concierge-consent {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  min-height: 44px;
+  padding-block: 12px;
   color: var(--ink);
   font-size: 0.875rem;
   line-height: 1.5;
   cursor: pointer;
 }
 
-.concierge-consent input {
-  flex: 0 0 auto;
-  align-self: flex-start;
-  width: 1rem;
-  height: 1rem;
-  margin: 3px 0 0;
-  accent-color: var(--blue);
+.concierge-consent > input {
+  position: absolute;
+  inset-block-start: 12px;
+  inset-inline-start: 0;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+
+.concierge-consent__indicator {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 1px solid #8e7861;
+  background: #fffbf5;
+  color: var(--ink);
+}
+
+.concierge-consent__indicator::after {
+  width: 6px;
+  height: 10px;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  content: '';
+  opacity: 0;
+  transform: translateY(-1px) rotate(45deg);
+}
+
+.concierge-consent > input:checked + .concierge-consent__indicator {
+  border-color: var(--ink);
+  background: #c6a467;
+}
+
+.concierge-consent > input:checked + .concierge-consent__indicator::after { opacity: 1; }
+
+.concierge-consent > input:focus-visible + .concierge-consent__indicator {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.concierge-consent > input:disabled ~ span { cursor: default; opacity: 0.65; }
+
+@media (forced-colors: active) {
+  .concierge-consent__indicator { border-color: ButtonText; background: Canvas; }
+  .concierge-consent > input:checked + .concierge-consent__indicator { border-color: Highlight; background: Highlight; color: HighlightText; forced-color-adjust: none; }
+  .concierge-consent > input:focus-visible + .concierge-consent__indicator { outline-color: Highlight; }
 }
 
 .concierge-privacy {
@@ -102,7 +150,7 @@
   max-height: calc(100vh - 32px);
   overflow: auto;
   padding: 32px;
-  border: 1px solid var(--line);
+  border: 1px solid #c6a467;
   background: var(--paper);
   color: var(--ink);
   box-shadow: 0 8px 48px rgb(57 45 39 / 18%);
@@ -139,11 +187,11 @@
 }
 
 .contact-page h1 { font-size: clamp(3rem, 6vw, 5rem); }
-.contact-page__intro p { margin: 24px 0; max-width: 45ch; }
+.contact-page__intro p { margin: 24px 0; max-width: 44ch; line-height: 1.75; }
 .contact-page__email { display: block; margin: 0 0 12px; overflow-wrap: anywhere; text-decoration: underline; text-underline-offset: 4px; }
-.contact-page__form { position: relative; display: grid; gap: 16px; min-width: 0; padding: clamp(20px, 4vw, 40px); border: 1px solid var(--line); }
+.contact-page__form { position: relative; display: grid; gap: 16px; min-width: 0; padding: clamp(24px, 4vw, 48px); border: 1px solid #c6a467; background: var(--paper); }
 .contact-page__form label:not(.concierge-consent) { display: block; font-size: 0.9375rem; font-weight: 500; }
-.contact-page__form label:not(.concierge-consent) > span { font-weight: 400; }
+.contact-page__form label:not(.concierge-consent) > span { color: var(--muted, #68574d); font-size: 0.875rem; font-weight: 400; }
 .contact-page__form input:not([type='checkbox']), .contact-page__form select, .contact-page__form textarea { display: block; margin-top: 8px; }
 .contact-page__form textarea { min-height: 120px; resize: vertical; }
 .contact-page__form-actions { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }

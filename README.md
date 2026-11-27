@@ -31,7 +31,7 @@ CREST & CARAT is a jewelry storefront for Evercrest VIP LLC. Vite builds static 
 
 See the [launch handoff](LAUNCH_HANDOFF.md) for the full production setup and account approvals.
 
-1. Run `npx wrangler login`. If Milestone 1 used a production D1 database, find its UUID in the Cloudflare dashboard and use that same database. Otherwise run `npx wrangler d1 create crest-and-carat`. In `worker/wrangler.toml`, replace the production database ID placeholder with that UUID and set its database name to the actual name. Keep the top-level test database separate.
+1. Run `npx wrangler login` and confirm that the account contains `crest-and-carat-db`. The production `DB` binding in `worker/wrangler.toml` already points to that database. Keep the top-level test binding for local development.
 2. Back up the existing production database if applicable. Check its migration history, then apply the Worker migrations. The first migration retains its original name and the second copies the Milestone 1 subscriber records and existing consent and forwarding timestamps into the new table.
 
    ```sh

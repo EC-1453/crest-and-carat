@@ -17,10 +17,10 @@ const organizationId = `${SITE_ORIGIN}/#organization`
 const brandId = `${SITE_ORIGIN}/#brand`
 const websiteId = `${SITE_ORIGIN}/#website`
 const socialImage = {
-  src: '/images/social.jpg',
+  src: '/images/high-jewelry-social.jpg',
   width: 1200,
   height: 630,
-  alt: 'CREST & CARAT concept styling of gold jewelry and pearls on limestone',
+  alt: 'CREST & CARAT high jewelry design study on warm limestone',
 }
 
 const countries = {
@@ -101,7 +101,17 @@ function offerPrice(item: CatalogItem): string {
 
 function productSchema({ product, item, destinations }: VerifiedOffer): SchemaNode {
   const url = absoluteUrl(productPath(product.slug))
-  const stone = product.verifiedDetails?.stone
+  const details = product.verifiedDetails
+  const stone = details?.stone
+  const additionalProperty = [
+    ['Metal purity', details?.metalPurity],
+    ['Stone', stone?.description],
+    ['Carat weight', stone && 'caratWeight' in stone ? `${stone.caratWeight} ct` : undefined],
+    ['Origin', stone && 'origin' in stone ? stone.origin : undefined],
+    ['Geographical origin', stone && 'geographicalOrigin' in stone ? stone.geographicalOrigin : undefined],
+    ['Color grade', stone && 'colorGrade' in stone ? stone.colorGrade : undefined],
+    ['Clarity grade', stone && 'clarityGrade' in stone ? stone.clarityGrade : undefined],
+  ].flatMap(([name, value]) => value ? [{ '@type': 'PropertyValue', name, value }] : [])
   return {
     '@type': 'Product',
     '@id': `${url}#product`,
@@ -113,7 +123,7 @@ function productSchema({ product, item, destinations }: VerifiedOffer): SchemaNo
     category: product.category,
     brand: { '@id': brandId },
     sku: item.sku,
-    ...(stone ? { additionalProperty: { '@type': 'PropertyValue', name: 'Stone', value: stone.description } } : {}),
+    ...(additionalProperty.length ? { additionalProperty } : {}),
     offers: {
       '@type': 'Offer',
       url,
@@ -131,6 +141,8 @@ function pageSchema(route: Route, offer: VerifiedOffer | undefined): SchemaNode 
   const guide = isGuide(route)
   const appLinks = [iosAppStoreUrl, googlePlayUrl].filter(Boolean)
   const trailId = `${url}#breadcrumb`
+  const collectionPage = route.kind === 'shop' || route.kind === 'high-jewelry' || route.kind === 'collection'
+  const highJewelryList = route.kind === 'high-jewelry' ? `${url}#pieces` : undefined
   const graph: SchemaNode[] = [
     {
       '@type': 'Organization',
@@ -154,7 +166,7 @@ function pageSchema(route: Route, offer: VerifiedOffer | undefined): SchemaNode 
     { '@type': 'Brand', '@id': brandId, name: SITE_NAME, url: SITE_ORIGIN, logo: absoluteUrl('/images/wordmark.svg') },
     { '@type': 'WebSite', '@id': websiteId, url: SITE_ORIGIN, name: SITE_NAME, inLanguage: 'en', publisher: { '@id': organizationId } },
     {
-      '@type': route.kind === 'contact' ? 'ContactPage' : route.kind === 'shop' || route.kind === 'collection' ? 'CollectionPage' : 'WebPage',
+      '@type': route.kind === 'contact' ? 'ContactPage' : collectionPage ? 'CollectionPage' : 'WebPage',
       '@id': `${url}#webpage`,
       url,
       name: getTitle(route),
@@ -162,6 +174,7 @@ function pageSchema(route: Route, offer: VerifiedOffer | undefined): SchemaNode 
       inLanguage: 'en',
       isPartOf: { '@id': websiteId },
       ...(route.breadcrumbs.length > 1 ? { breadcrumb: { '@id': trailId } } : {}),
+      ...(highJewelryList ? { mainEntity: { '@id': highJewelryList } } : {}),
       ...(offer ? { mainEntity: { '@id': `${url}#product` } } : {}),
     },
   ]
@@ -175,6 +188,21 @@ function pageSchema(route: Route, offer: VerifiedOffer | undefined): SchemaNode 
         position: index + 1,
         name: label,
         item: absoluteUrl(path),
+      })),
+    })
+  }
+
+  if (highJewelryList) {
+    const pieces = products.filter((product) => product.tier === 'high-jewelry')
+    graph.push({
+      '@type': 'ItemList',
+      '@id': highJewelryList,
+      name: route.label,
+      itemListElement: pieces.map(({ name, slug }, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name,
+        url: absoluteUrl(productPath(slug)),
       })),
     })
   }
@@ -353,7 +381,7 @@ export function renderMerchantFeed(offers: readonly VerifiedOffer[] = []): strin
     '  <channel>',
     `    <title>${escapeMarkup(SITE_NAME)}</title>`,
     `    <link>${SITE_ORIGIN}/</link>`,
-    '    <description>Verified fine jewelry and jeweled objects available to purchase.</description>',
+    '    <description>Verified high jewelry, fine jewelry and jeweled objects available to purchase.</description>',
     ...items,
     '  </channel>',
     '</rss>',
